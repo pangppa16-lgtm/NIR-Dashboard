@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIR Lab Analytics Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --c-primary:       #1E40AF;
+  --c-primary-hover: #1D3899;
+  --c-primary-light: #EFF6FF;
+  --c-primary-mid:   #BFDBFE;
+  --c-primary-text:  #1D4ED8;
+  --c-sidebar:       #1E293B;
+  --c-sidebar-hover: rgba(255,255,255,0.06);
+  --c-sidebar-active-bg: rgba(96,165,250,0.12);
+  --c-sidebar-active: #60A5FA;
+  --c-sidebar-border: rgba(255,255,255,0.08);
+  --c-bg:            #F8FAFC;
+  --c-bg-card:       #ffffff;
+  --c-bg-surface:    #F8FAFC;
+  --c-border:        #E2E8F0;
+  --c-border-light:  #F1F5F9;
+  --c-text-1:        #0F172A;
+  --c-text-2:        #374151;
+  --c-text-3:        #64748B;
+  --c-text-4:        #94A3B8;
+  --c-good:          #16A34A;
+  --c-good-bg:       #F0FDF4;
+  --c-good-border:   #BBF7D0;
+  --c-good-text:     #15803D;
+  --c-fair:          #D97706;
+  --c-fair-bg:       #FFFBEB;
+  --c-fair-border:   #FDE68A;
+  --c-fair-text:     #B45309;
+  --c-alert:         #DC2626;
+  --c-alert-bg:      #FEF2F2;
+  --c-alert-border:  #FECACA;
+  --c-alert-text:    #B91C1C;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text-1);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: var(--r-lg); }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: 260px; min-width: 260px;
+  background: var(--c-sidebar);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden;
+}
+.sb-top {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--c-sidebar-border);
+}
+.sb-logo {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+}
+.sb-logo-icon {
+  width: 32px; height: 32px; border-radius: var(--r-md);
+  background: var(--c-primary);
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-logo-icon svg { width: 18px; height: 18px; }
+.sb-brand { font-size: 15px; font-weight: 600; color: #F1F5F9; }
+.sb-version { font-size: 11px; color: #64748B; margin-top: 2px; }
+
+.sb-nav { flex: 1; overflow-y: auto; padding: 12px 0; }
+.sb-section-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: #475569;
+  padding: 8px 20px 4px;
+}
+.group-item { margin: 1px 8px; border-radius: 8px; overflow: hidden; }
+.group-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px;
+  background: transparent; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+  color: #94A3B8; border-radius: 8px; transition: all .15s;
+  text-align: left;
+}
+.group-btn:hover { background: rgba(255,255,255,0.06); color: #E2E8F0; }
+.group-btn.active {
+  background: var(--c-sidebar-active-bg);
+  color: var(--c-sidebar-active);
+  border-left: 3px solid var(--c-sidebar-active);
+  padding-left: 9px;
+}
+.group-btn.open { background: var(--c-sidebar-hover); color: #E2E8F0; }
+.group-btn .icon { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
+.group-btn .arrow {
+  width: 14px; height: 14px; color: #475569;
+  transition: transform .2s; flex-shrink: 0;
+}
+.group-btn.open .arrow { transform: rotate(90deg); }
+.group-btn.active .arrow { color: rgba(255,255,255,.7); }
+
+.sample-list {
+  max-height: 0; overflow: hidden;
+  transition: max-height .25s ease;
+  padding: 0 8px;
+}
+.sample-list.open { max-height: 400px; }
+.sample-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px 6px 32px;
+  background: transparent; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; font-size: 12px;
+  color: #64748B; border-radius: var(--r-sm); transition: all .12s;
+  text-align: left;
+}
+.sample-btn::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: #334155; flex-shrink: 0; margin-left: -13px;
+}
+.sample-btn:hover { background: rgba(255,255,255,0.04); color: #CBD5E1; }
+.sample-btn.active { color: #60A5FA; font-weight: 500; }
+.sample-btn.active::before { background: #60A5FA; }
+
+.sb-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #64748B; margin-bottom: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── MAIN ── */
+#main {
+  flex: 1; display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden; min-width: 0;
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  background: var(--c-bg-card); border-bottom: 1px solid #E2E8F0;
+  padding: 0 28px; height: 60px;
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+  border-top: 3px solid var(--c-primary);
+}
+.topbar-title { font-size: 16px; font-weight: 600; color: #0F172A; flex: 1; }
+.topbar-subtitle { font-size: 12px; font-weight: 400; color: #94A3B8; margin-left: 8px; }
+.tb-select {
+  font-family: 'Inter', sans-serif; font-size: 12px;
+  padding: 6px 12px; height: 34px;
+  background: var(--c-bg-surface); border: 1px solid var(--c-border); border-radius: 8px;
+  color: #374151; cursor: pointer; outline: none;
+  transition: border-color .15s;
+}
+.tb-select:focus { border-color: #1E40AF; }
+.upload-trigger {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 16px; height: 34px;
+  background: var(--c-primary); border: none; border-radius: var(--r-md);
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+  color: #fff; cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.upload-trigger:hover { background: var(--c-primary-hover); }
+.upload-trigger svg { width: 14px; height: 14px; }
+.week-chip {
+  font-size: 11px; padding: 3px 10px;
+  background: var(--c-primary-light); border: 1px solid var(--c-primary-mid); border-radius: 20px;
+  color: var(--c-primary-text); font-weight: 500; white-space: nowrap;
+}
+
+/* ── CONTENT ── */
+#content { flex: 1; overflow-y: auto; padding: 28px; scroll-behavior: smooth; }
+
+/* ── UPLOAD SCREEN ── */
+#uploadScreen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: calc(100vh - 60px);
+}
+.upload-card {
+  background: #fff; border: 2px dashed #CBD5E1; border-radius: var(--r-lg);
+  padding: 60px 48px; text-align: center; cursor: pointer;
+  transition: all .2s; max-width: 520px; width: 100%;
+}
+.upload-card:hover { border-color: #1E40AF; background: #EFF6FF; }
+.upload-icon-wrap {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: #EFF6FF; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.upload-icon-wrap svg { width: 28px; height: 28px; color: #1E40AF; }
+.upload-title { font-size: 18px; font-weight: 600; color: #0F172A; margin-bottom: 8px; }
+.upload-desc { font-size: 13px; color: #64748B; line-height: 1.7; margin-bottom: 24px; }
+.demo-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 20px; background: #EFF6FF; border: 1px solid #BFDBFE;
+  border-radius: 8px; font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500; color: #1E40AF; cursor: pointer;
+  transition: all .15s;
+}
+.demo-btn:hover { background: #DBEAFE; }
+.demo-btn svg { width: 14px; height: 14px; }
+
+/* ── BREADCRUMB ── */
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #94A3B8; margin-bottom: 20px;
+}
+.breadcrumb .sep { color: #CBD5E1; }
+.breadcrumb .active { color: #1E40AF; font-weight: 500; }
+
+/* ── TABS ── */
+.tabs {
+  display: flex; gap: 2px; margin-bottom: 24px;
+  background: var(--c-border-light); border-radius: 10px; padding: 4px;
+  width: fit-content;
+}
+.tab-btn {
+  padding: 7px 18px; background: transparent; border: none;
+  border-radius: var(--r-md); font-family: 'Inter', sans-serif;
+  font-size: 13px; color: #64748B; cursor: pointer; transition: all .15s;
+}
+.tab-btn:hover { color: #374151; }
+.tab-btn.active {
+  background: #fff; color: #1E40AF; font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+}
+
+/* ── STAT OVERVIEW ── */
+.overview-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  margin-bottom: 28px;
+}
+.overview-card {
+  background: #fff; border: 1px solid #E2E8F0; border-radius: var(--r-lg);
+  padding: 20px; transition: box-shadow .15s;
+}
+.overview-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.overview-card.ov-good  { border-color: var(--c-good-border);  background: var(--c-good-bg);  border-left: 3px solid var(--c-good);  border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.overview-card.ov-fair  { border-color: var(--c-fair-border);  background: var(--c-fair-bg);  border-left: 3px solid var(--c-fair);  border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.overview-card.ov-alert { border-color: var(--c-alert-border); background: var(--c-alert-bg); border-left: 3px solid var(--c-alert); border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.ov-label { font-size: 12px; color: #94A3B8; font-weight: 500; margin-bottom: 8px; }
+.ov-val { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.ov-sub { font-size: 12px; color: #94A3B8; }
+.ov-good .ov-val { color: #16A34A; }
+.ov-fair .ov-val { color: #D97706; }
+.ov-alert .ov-val { color: #DC2626; }
+
+/* ── PARAM CARDS ── */
+.param-section-title {
+  font-size: 13px; font-weight: 600; color: #374151;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.param-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+.param-card {
+  background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px 20px;
+  transition: box-shadow .15s;
+}
+.param-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.pc-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.pc-name { font-size: 14px; font-weight: 600; color: #0F172A; }
+.pc-threshold { font-size: 11px; color: #94A3B8; margin-left: auto; background: #F8FAFC; padding: 2px 8px; border-radius: 20px; }
+.pc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ps-item { background: #F8FAFC; border-radius: 8px; padding: 10px 8px; text-align: center; }
+.ps-item.g { background: #F0FDF4; }
+.ps-item.y { background: #FFFBEB; }
+.ps-item.r { background: #FFF1F2; }
+.ps-lbl { font-size: 10px; color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.ps-val { font-size: 15px; font-weight: 600; color: #374151; }
+.ps-item.g .ps-val { color: #16A34A; }
+.ps-item.y .ps-val { color: #D97706; }
+.ps-item.r .ps-val { color: #DC2626; }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 500; letter-spacing: .01em;
+}
+.badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.badge.g { background: var(--c-good-bg); color: var(--c-good-text); border: 1px solid var(--c-good-border); }
+.badge.g::before { background: var(--c-good); }
+.badge.y { background: var(--c-fair-bg); color: var(--c-fair-text); border: 1px solid var(--c-fair-border); }
+.badge.y::before { background: var(--c-fair); }
+.badge.r { background: var(--c-alert-bg); color: var(--c-alert-text); border: 1px solid var(--c-alert-border); }
+.badge.r::before { background: var(--c-alert); }
+
+/* ── TABLE ── */
+.table-container {
+  background: #fff; border: 1px solid #E2E8F0; border-radius: 12px;
+  overflow: hidden; margin-bottom: 28px;
+}
+.table-header {
+  padding: 16px 20px; border-bottom: 1px solid #F1F5F9;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.table-title { font-size: 13px; font-weight: 600; color: #374151; }
+.table-count { font-size: 12px; color: #94A3B8; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead th {
+  padding: 10px 16px; text-align: left;
+  font-size: 11px; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: #64748B;
+  background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+tbody td {
+  padding: 10px 16px; color: #374151;
+  border-bottom: 1px solid #F8FAFC; white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #F8FAFC; }
+.td-mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+.cell-g { color: #16A34A !important; font-weight: 600; }
+.cell-y { color: #D97706 !important; font-weight: 600; }
+.cell-r { color: #DC2626 !important; font-weight: 600; }
+
+/* ── HEATMAP ── */
+.heatmap-wrap { overflow-x: auto; }
+.hm-th { text-align: center !important; font-size: 10px !important; }
+.hm-td {
+  text-align: center !important;
+  font-family: 'SF Mono','Fira Code',monospace;
+  font-size: 11px; font-weight: 600;
+  padding: 8px 6px !important;
+}
+.hm-g { background: var(--c-good-bg) !important; color: var(--c-good-text) !important; border-left: 2px solid var(--c-good); }
+.hm-y { background: var(--c-fair-bg) !important; color: var(--c-fair-text) !important; border-left: 2px solid var(--c-fair); }
+.hm-r { background: var(--c-alert-bg) !important; color: var(--c-alert-text) !important; border-left: 2px solid var(--c-alert); }
+.hm-empty { color: #CBD5E1 !important; }
+
+/* ── CHARTS ── */
+.chart-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+.chart-card {
+  background: #fff; border: 1px solid #E2E8F0; border-radius: 12px;
+  padding: 20px;
+}
+.chart-card-title { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.chart-legend {
+  display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.chart-legend span {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #64748B;
+}
+.chart-legend-dot { width: 10px; height: 3px; border-radius: 2px; }
+
+/* ── EMPTY ── */
+.empty-state { text-align: center; padding: 60px 20px; color: #94A3B8; font-size: 13px; }
+.empty-state svg { width: 32px; height: 32px; margin: 0 auto 12px; display: block; opacity: .4; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  padding: 12px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 500;
+  transform: translateY(20px); opacity: 0;
+  transition: all .3s; pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.ok { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+#toast.err { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+
+.divider { height: 1px; background: var(--c-border-light); margin: 4px 0; }
+
+@keyframes shimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--c-border-light) 25%, var(--c-border) 50%, var(--c-border-light) 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--r-md);
+}
+.skeleton-card {
+  background: var(--c-bg-card); border: 1px solid var(--c-border);
+  border-radius: var(--r-lg); padding: 20px; 
+}
+.sk-line { height: 10px; margin-bottom: 8px; }
+.sk-val  { height: 28px; width: 60%; }
+.sk-sub  { height: 8px; width: 40%; margin-top: 6px; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn .25s ease forwards; }
+
+@keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.3);opacity:.7} }
+.badge::before { animation: pulse-dot 2.5s ease-in-out infinite; }
+.badge.r::before { animation: pulse-dot 1.5s ease-in-out infinite; }
+.clear-btn {
+  font-family: 'Inter', sans-serif; font-size: 12px;
+  padding: 0 14px; height: 34px;
+  background: transparent; border: 1px solid #E2E8F0; border-radius: 8px;
+  color: #94A3B8; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.clear-btn:hover { background: #FEF2F2; border-color: #FECACA; color: #DC2626; }
+
+@media (max-width: 768px) {
+  #sidebar { width: 0; min-width: 0; overflow: hidden; transition: width .25s; position: absolute; z-index: 100; height: 100vh; }
+  #sidebar.open { width: 260px; min-width: 260px; box-shadow: 4px 0 20px rgba(0,0,0,.15); }
+  #main { width: 100%; }
+  .overview-grid { grid-template-columns: repeat(2, 1fr); }
+  .param-grid { grid-template-columns: 1fr; }
+  .chart-grid { grid-template-columns: 1fr; }
+  #topbar { padding: 0 12px; gap: 8px; }
+  #content { padding: 16px !important; }
+  .menu-toggle { display: flex !important; }
+}
+.menu-toggle {
+  display: none; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: 1px solid #E2E8F0;
+  border-radius: 8px; background: transparent; cursor: pointer;
+  flex-shrink: 0;
+}
+.menu-toggle svg { width: 16px; height: 16px; color: #374151; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+::selection { background: var(--c-primary-light); color: var(--c-primary); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12h4"/>
+          <path d="M18 12h4"/>
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M6 12 Q9 7 12 12 Q15 17 18 12"/>
+          <path d="M5 7l1.5 2"/>
+          <path d="M5 17l1.5-2"/>
+          <path d="M19 7l-1.5 2"/>
+          <path d="M19 17l-1.5-2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sb-brand">NIR Analytics</div>
+      </div>
+    </div>
+    <div class="sb-version">Sugar Processing Plant</div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-section-label">Navigation</div>
+    <div class="group-item">
+      <button class="group-btn active" id="grp-0" onclick="selGroup(0, this)">
+        <span style="display:flex;align-items:center;gap:8px">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          All Groups
+        </span>
+      </button>
+    </div>
+    <div class="divider" style="margin:8px 12px"></div>
+
+    <div id="grp-block-1">
+      <div class="group-item">
+        <button class="group-btn" id="grp-1" onclick="toggleGroup(1,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            Juice / Syrup
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-1"></div>
+    </div>
+
+    <div id="grp-block-2">
+      <div class="group-item">
+        <button class="group-btn" id="grp-2" onclick="toggleGroup(2,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l-4 7h-4L6 3z"/><path d="M8 10c-2.5 2-4 4.5-4 6a8 8 0 0 0 16 0c0-1.5-1.5-4-4-6"/></svg>
+            Liquor
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-2"></div>
+    </div>
+
+    <div id="grp-block-3">
+      <div class="group-item">
+        <button class="group-btn" id="grp-3" onclick="toggleGroup(3,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12"/><path d="M12 12C12 12 7 9 7 5a5 5 0 0 1 10 0c0 4-5 7-5 7z"/><path d="M12 12s-3 3-3 7"/><path d="M12 12s3 3 3 7"/></svg>
+            Seed
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-3"></div>
+    </div>
+
+    <div id="grp-block-4">
+      <div class="group-item">
+        <button class="group-btn" id="grp-4" onclick="toggleGroup(4,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+            Massecuite
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-4"></div>
+    </div>
+
+    <div id="grp-block-5">
+      <div class="group-item">
+        <button class="group-btn" id="grp-5" onclick="toggleGroup(5,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8c1.5 0 2.5 1.5 4 1.5S8.5 8 10 8s2.5 1.5 4 1.5S16.5 8 18 8s2.5 1.5 4 1.5"/><path d="M2 14c1.5 0 2.5 1.5 4 1.5s2.5-1.5 4-1.5 2.5 1.5 4 1.5 2.5-1.5 4-1.5 2.5 1.5 4 1.5"/><path d="M2 20h20"/></svg>
+            Molasses
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-5"></div>
+    </div>
+
+    <div id="grp-block-6">
+      <div class="group-item">
+        <button class="group-btn" id="grp-6" onclick="toggleGroup(6,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+            Suction
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-6"></div>
+    </div>
+
+    <div id="grp-block-7">
+      <div class="group-item">
+        <button class="group-btn" id="grp-7" onclick="toggleGroup(7,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            Sugar
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-7"></div>
+    </div>
+
+    <div id="grp-block-8">
+      <div class="group-item">
+        <button class="group-btn" id="grp-8" onclick="toggleGroup(8,this)">
+          <span style="display:flex;align-items:center;gap:8px">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            Waste / By-products
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="sample-list" id="sl-8"></div>
+    </div>
+  </nav>
+
+  <div class="sb-footer">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:8px">Status Guide</div>
+    <div class="legend-row"><div class="legend-dot" style="background:#16A34A"></div>Good — within threshold</div>
+    <div class="legend-row"><div class="legend-dot" style="background:#D97706"></div>Fair — approaching limit</div>
+    <div class="legend-row"><div class="legend-dot" style="background:#DC2626"></div>Alert — exceeds limit</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-title">
+      NIR Lab Analytics
+      <span class="topbar-subtitle" id="topCtx">— All Groups</span>
+    </div>
+    <select class="tb-select" id="wkSel" onchange="render()"><option value="">All Dates</option></select>
+    <select class="tb-select" id="pmSel" onchange="render()"><option value="">All Parameters</option></select>
+    <button class="clear-btn" onclick="clearData()" id="clearBtn" style="display:none">Clear Data</button>
+    <button class="upload-trigger" onclick="document.getElementById('fileInput').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      Upload CSV
+    </button>
+    <input type="file" id="fileInput" accept=".csv" multiple style="display:none" onchange="handleUpload(event)">
+    <div id="weekChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+
+  <!-- UPLOAD SCREEN -->
+  <div id="uploadScreen">
+    <div class="upload-card" onclick="document.getElementById('fileInput').click()" id="dropZone">
+      <div class="upload-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="upload-title">Upload your CSV file</div>
+      <div class="upload-desc">
+        Supports format: Day, Sample, Brix-NIR, Brix-Lab, Brix-Diff, Brix-%RPD, ...<br>
+        Upload multiple files to compare across weeks.
+      </div>
+      <button class="demo-btn" onclick="event.stopPropagation(); loadDemo()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Load demo data
+      </button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" style="display:none;flex:1;overflow-y:auto;">
+    <div id="content"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const PARAMS = ['Brix','Pol','Purity','Color','Moisture','TSAI','RS'];
+const GROUP_NAMES = {0:'All Groups',1:'Juice / Syrup',2:'Liquor',3:'Seed',4:'Massecuite',5:'Molasses',6:'Suction',7:'Sugar',8:'Waste / By-products'};
+const GRP_KEYS = {1:['juice','syrup'],2:['liquor'],3:['seed'],4:['massecuite','mass'],5:['molasses','mol'],6:['suction'],7:['sugar'],8:['bagasse','filter','waste']};
+
+const BRIX_POL_TH = [
+  {r:[0,20],diff:1.30,rpd:{g:5,f:10}},
+  {r:[21,50],diff:1.50,rpd:{g:3,f:5}},
+  {r:[51,90],diff:2.00,rpd:{g:1.5,f:3}},
+  {r:[91,999],diff:1.70,rpd:{g:1,f:2}}
+];
+const COLOR_TH = [
+  {r:[0,50],d:3},{r:[51,70],d:5},{r:[71,100],d:7},{r:[101,300],d:70},
+  {r:[301,500],d:100},{r:[501,800],d:130},{r:[801,1000],d:150},
+  {r:[1001,1500],d:200},{r:[1501,2500],d:250},{r:[2501,3500],d:300},
+  {r:[3501,5000],d:450},{r:[5001,6000],d:550},{r:[6001,7000],d:650}
+];
+const MOISTURE_TH = [
+  {r:[0,0.04],d:0.01},{r:[0.05,0.10],d:0.03},{r:[0.11,0.20],d:0.05},
+  {r:[0.21,0.40],d:0.07},{r:[0.41,0.60],d:0.10},{r:[0.61,1.00],d:0.15},
+  {r:[1.01,1.50],d:0.20},{r:[1.51,2.00],d:0.30},{r:[2.01,3.50],d:0.50},
+  {r:[45,55],d:1.50}
+];
+
+function findTH(table, v) {
+  for (const t of table) if (v >= t.r[0] && v <= t.r[1]) return t;
+  return table[table.length-1];
+}
+
+function getStatus(param, nir, lab, diff, rpd) {
+  const p = param.toLowerCase().replace('%','');
+  const v = (Math.abs(nir||0)+Math.abs(lab||0))/2;
+  const d = Math.abs(diff||0), r = Math.abs(rpd||0);
+  if (p==='brix'||p==='pol') {
+    const t = findTH(BRIX_POL_TH, v);
+    if (d<=t.diff && r<=t.rpd.g) return 'g';
+    if (r<=t.rpd.f) return 'y';
+    return 'r';
+  }
+  if (p==='color') { const t=findTH(COLOR_TH,v); return d<=t.d?'g':d<=t.d*1.5?'y':'r'; }
+  if (p==='moisture') { const t=findTH(MOISTURE_TH,v); return d<=t.d?'g':d<=t.d*2?'y':'r'; }
+  if (p==='tsai') return d<=2.0?'g':d<=4?'y':'r';
+  if (p==='rs') return d<=1.5?'g':d<=3?'y':'r';
+  if (p==='purity') return r<=2?'g':r<=5?'y':'r';
+  return r<=3?'g':r<=7?'y':'r';
+}
+
+function thLabel(param, nir, lab) {
+  const p = param.toLowerCase().replace('%','');
+  const v = (Math.abs(nir||0)+Math.abs(lab||0))/2;
+  if (p==='brix'||p==='pol') { const t=findTH(BRIX_POL_TH,v); return `Diff≤${t.diff} | RPD≤${t.rpd.g}%`; }
+  if (p==='color') { const t=findTH(COLOR_TH,v); return `Diff≤${t.d}`; }
+  if (p==='moisture') { const t=findTH(MOISTURE_TH,v); return `Diff≤${t.d}`; }
+  if (p==='tsai') return 'Diff≤2.00';
+  if (p==='rs') return 'Diff≤1.50';
+  return 'RPD≤3%';
+}
+
+function statusLabel(s) { return {g:'Good',y:'Fair',r:'Alert'}[s]||'?'; }
+function badgeHtml(s) { return `<span class="badge ${s}">${statusLabel(s)}</span>`; }
+
+let allRows=[], activeGroup=0, activeSample='', currentTab=0, chartInsts={};
+
+function getGroup(s) {
+  const sl=(s||'').toLowerCase();
+  for (const [k,keys] of Object.entries(GRP_KEYS)) if (keys.some(k2=>sl.includes(k2))) return parseInt(k);
+  return 0;
+}
+
+function parseCSV(rows) {
+  const out=[];
+  rows.forEach(r => {
+    const day=r['Day']||r['Date']||'', sample=r['Sample']||'';
+    if (!sample) return;
+    PARAMS.forEach(p => {
+      const fv = ks => { for (const k of ks) if (k&&r[k]!==undefined&&r[k]!=='') return parseFloat(r[k]); return null; };
+      const nir = fv([p+'-NIR','%'+p+'-NIR']);
+      const lab = fv([p+'-Lab','%'+p+'-Lab']);
+      if (nir===null&&lab===null) return;
+      const dv = fv([p+'-Diff','%'+p+'-Diff','Moisture-Diff']);
+      const rv = fv([p+'-%RPD',p+'_RPD']);
+      const d = dv!==null ? dv : (nir!==null&&lab!==null ? nir-lab : 0);
+      const avg2=(Math.abs(nir||0)+Math.abs(lab||0))/2;
+      const rr = rv!==null ? rv : (avg2===0?0:((nir||0)-(lab||0))/avg2*100);
+      out.push({day,sample,group:getGroup(sample),param:p,nir:nir||0,lab:lab||0,diff:+d.toFixed(4),rpd:+rr.toFixed(3),status:getStatus(p,nir||0,lab||0,d,rr)});
+    });
+  });
+  return out;
+}
+
+function handleUpload(e) {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  // Reset input so same file can be re-selected next time
+  const fi = document.getElementById('fileInput');
+  setTimeout(() => { fi.value = ''; }, 200);
+  let done = 0, added = 0;
+  files.forEach(f => {
+    Papa.parse(f, { header: true, skipEmptyLines: true, complete(res) {
+      done++;
+      const parsed = parseCSV(res.data);
+      if (!parsed.length) {
+        toast('No data found in ' + f.name, 'err');
+      } else {
+        // Deduplicate by day+sample+param key
+        const existing = new Set(allRows.map(r => r.day + '|' + r.sample + '|' + r.param));
+        const fresh = parsed.filter(r => !existing.has(r.day + '|' + r.sample + '|' + r.param));
+        allRows = [...allRows, ...fresh];
+        added += fresh.length;
+      }
+      if (done === files.length) {
+        if (added > 0) {
+          refreshFilters();
+          buildSidebarSamples();
+          showDashboard();
+          showSkeleton();
+          setTimeout(() => render(), 120);
+          toast('Loaded ' + files.length + ' file(s) — ' + added + ' new rows', 'ok');
+          const cb = document.getElementById('clearBtn');
+          if (cb) cb.style.display = 'block';
+        } else {
+          toast('No new data — rows may already be loaded', 'err');
+        }
+      }
+    }});
+  });
+}
+
+document.addEventListener('dragover', e=>e.preventDefault());
+document.addEventListener('drop', e=>{
+  e.preventDefault();
+  if (e.dataTransfer&&e.dataTransfer.files.length) {
+    const fakeEv={target:{files:e.dataTransfer.files}};
+    handleUpload(fakeEv);
+  }
+});
+
+function buildSidebarSamples() {
+  for (let g=1;g<=8;g++) {
+    const sl=document.getElementById('sl-'+g); if (!sl) continue;
+    const samples=[...new Set(allRows.filter(d=>d.group===g).map(d=>d.sample))].sort();
+    sl.innerHTML=samples.map(s=>{
+      const esc = s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<button class="sample-btn" data-sample='${esc}' onclick="selSample('${esc}',this)">${s}</button>`;
+    }).join('');
+  }
+}
+
+function refreshFilters() {
+  const days=[...new Set(allRows.map(d=>d.day))].sort((a,b)=>{
+    const p=s=>{const[d,m,y]=s.split('/');return new Date(+y,+m-1,+d);};
+    return p(a)-p(b);
+  });
+  const wk=document.getElementById('wkSel');
+  wk.innerHTML='<option value="">All Dates</option>'+days.map((w,i)=>`<option value="${w}">Week ${i+1} — ${w}</option>`).join('');
+  const pm=document.getElementById('pmSel');
+  pm.innerHTML='<option value="">All Parameters</option>'+PARAMS.map(p=>`<option value="${p}">${p}</option>`).join('');
+  document.getElementById('weekChips').innerHTML=days.map((w,i)=>`<span class="week-chip">W${i+1}</span>`).join('');
+}
+
+function getFiltered() {
+  const wf=document.getElementById('wkSel').value;
+  const pf=document.getElementById('pmSel').value;
+  return allRows.filter(d=>{
+    if (activeGroup!==0&&d.group!==activeGroup) return false;
+    if (activeSample&&d.sample!==activeSample) return false;
+    if (wf&&d.day!==wf) return false;
+    if (pf&&d.param!==pf) return false;
+    return true;
+  });
+}
+
+function selGroup(g, btn) {
+  activeGroup=g; activeSample='';
+  document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active','open'));
+  document.querySelectorAll('.sample-list').forEach(el=>el.classList.remove('open'));
+  btn.classList.add('active');
+  hlSamples(); render();
+}
+
+function toggleGroup(g, btn) {
+  const sl=document.getElementById('sl-'+g); if (!sl) return;
+  const wasOpen=sl.classList.contains('open');
+  document.querySelectorAll('.sample-list').forEach(el=>el.classList.remove('open'));
+  document.querySelectorAll('.group-btn:not(#grp-0)').forEach(b=>b.classList.remove('open','active'));
+  document.getElementById('grp-0').classList.remove('active');
+  if (!wasOpen) {
+    sl.classList.add('open'); btn.classList.add('open','active');
+    activeGroup=g; activeSample=''; hlSamples(); render();
+  } else {
+    activeGroup=0; activeSample='';
+    document.getElementById('grp-0').classList.add('active'); render();
+  }
+}
+
+function selSample(s, btn) {
+  activeSample = s;
+  // ensure activeGroup matches the sample's group so getFiltered works
+  const grp = allRows.find(d => d.sample === s);
+  if (grp && activeGroup === 0) activeGroup = grp.group;
+  hlSamples(); render();
+}
+
+function hlSamples() {
+  document.querySelectorAll('.sample-btn').forEach(b=>{
+    b.classList.remove('active');
+    if (activeSample && b.dataset.sample === activeSample) b.classList.add('active');
+  });
+}
+
+function switchTab(i) {
+  currentTab=i;
+  document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.style.display=j===i?'block':'none');
+}
+
+function showDashboard() {
+  document.getElementById('uploadScreen').style.display='none';
+  document.getElementById('dashboard').style.display='flex';
+}
+
+function render() {
+  if (!allRows.length) return;
+  const data = getFiltered();
+  const ctx = activeSample ? activeSample : (GROUP_NAMES[activeGroup] || 'All Groups');
+  document.getElementById('topCtx').textContent = '— ' + ctx;
+
+  const c = document.getElementById('content');
+  c.style.padding = '28px';
+  c.innerHTML = '';
+
+  // breadcrumb — use createElement, no innerHTML+=
+  const bcDiv = document.createElement('div');
+  bcDiv.className = 'breadcrumb';
+  const bcSpan = document.createElement('span');
+  bcSpan.textContent = GROUP_NAMES[activeGroup] || 'All Groups';
+  bcDiv.appendChild(bcSpan);
+  if (activeSample) {
+    const sep = document.createElement('span');
+    sep.className = 'sep'; sep.textContent = '›';
+    const act = document.createElement('span');
+    act.className = 'active'; act.textContent = activeSample;
+    bcDiv.appendChild(sep); bcDiv.appendChild(act);
+  }
+  c.appendChild(bcDiv);
+
+  // tabs — createElement only, no innerHTML+=
+  const tabsDiv = document.createElement('div');
+  tabsDiv.className = 'tabs';
+  ['Summary','Heatmap','Data Table','Trend Charts'].forEach((t, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === currentTab ? ' active' : '');
+    btn.textContent = t;
+    btn.onclick = () => switchTab(i);
+    tabsDiv.appendChild(btn);
+  });
+  c.appendChild(tabsDiv);
+
+  // panels
+  const panels = [0,1,2,3].map(i => {
+    const d = document.createElement('div');
+    d.className = 'tab-panel fade-in';
+    d.id = 'panel' + i;
+    d.style.display = i === currentTab ? 'block' : 'none';
+    c.appendChild(d);
+    return d;
+  });
+
+  buildSummary(data, panels[0]);
+  buildHeatmap(data, panels[1]);
+  buildTable(data, panels[2]);
+  buildCharts(data, panels[3]);
+}
+
+function avg(arr) { return arr.length ? arr.reduce((a,v)=>a+v,0)/arr.length : 0; }
+function esc(s) { const d=document.createElement('div'); d.textContent=String(s); return d.innerHTML; }
+function fmt(v,n=2) { return isNaN(v)?'—':(+v).toFixed(n); }
+
+function buildSummary(data, panel) {
+  if (!data.length) { panel.innerHTML='<div class="empty-state">No data for selected filters</div>'; return; }
+  const sc=data.reduce((a,d)=>{a[d.status]=(a[d.status]||0)+1;return a},{});
+  const tot=data.length;
+  const pct=n=>tot?Math.round((n||0)/tot*100):0;
+
+  let html=`<div class="overview-grid">
+    <div class="overview-card"><div class="ov-label">Total Measurements</div><div class="ov-val" style="color:#1E40AF">${tot}</div><div class="ov-sub">across all parameters</div></div>
+    <div class="overview-card ov-good"><div class="ov-label">Good</div><div class="ov-val">${sc.g||0}</div><div class="ov-sub">${pct(sc.g)}% of total</div></div>
+    <div class="overview-card ov-fair"><div class="ov-label">Fair</div><div class="ov-val">${sc.y||0}</div><div class="ov-sub">${pct(sc.y)}% of total</div></div>
+    <div class="overview-card ov-alert"><div class="ov-label">Alert</div><div class="ov-val">${sc.r||0}</div><div class="ov-sub">${pct(sc.r)}% of total</div></div>
+  </div>`;
+
+  const byParam={};
+  data.forEach(d=>{ if(!byParam[d.param]) byParam[d.param]=[]; byParam[d.param].push(d); });
+
+  html+=`<div class="param-section-title">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+    Parameter Summary Cards
+  </div>
+  <div class="param-grid">`;
+
+  for (const [p, rows] of Object.entries(byParam)) {
+    const avgNIR=avg(rows.map(d=>d.nir));
+    const avgLab=avg(rows.map(d=>d.lab));
+    const avgDiff=avg(rows.map(d=>Math.abs(d.diff)));
+    const avgRPD=avg(rows.map(d=>Math.abs(d.rpd)));
+    const st=getStatus(p,avgNIR,avgLab,avgDiff,avgRPD);
+    const dom=rows.some(d=>d.status==='r')?'r':rows.some(d=>d.status==='y')?'y':'g';
+    const th=thLabel(p,avgNIR,avgLab);
+    html+=`<div class="param-card">
+      <div class="pc-header">
+        <div class="pc-name">${p}</div>
+        ${badgeHtml(dom)}
+        <span class="pc-threshold">${th}</span>
+      </div>
+      <div class="pc-stats">
+        <div class="ps-item"><div class="ps-lbl">NIR</div><div class="ps-val" style="color:#1E40AF">${fmt(avgNIR)}</div></div>
+        <div class="ps-item"><div class="ps-lbl">Lab</div><div class="ps-val">${fmt(avgLab)}</div></div>
+        <div class="ps-item ${st}"><div class="ps-lbl">Diff</div><div class="ps-val">${fmt(avgDiff,3)}</div></div>
+        <div class="ps-item ${st}"><div class="ps-lbl">%RPD</div><div class="ps-val">${fmt(avgRPD,2)}%</div></div>
+      </div>
+    </div>`;
+  }
+  html+='</div>';
+  panel.innerHTML=html;
+}
+
+function buildHeatmap(data, panel) {
+  if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
+  const samples=[...new Set(data.map(d=>d.sample))].sort();
+  const params=[...new Set(data.map(d=>d.param))];
+
+  let html=`<div class="table-container">
+    <div class="table-header"><span class="table-title">Heatmap — Diff &amp; %RPD by Sample × Parameter</span></div>
+    <div class="heatmap-wrap"><table>
+    <thead><tr><th>Sample</th>${params.map(p=>`<th class="hm-th" colspan="2">${p}</th>`).join('')}</tr>
+    <tr><th></th>${params.map(()=>'<th class="hm-th">Diff</th><th class="hm-th">%RPD</th>').join('')}</tr></thead>
+    <tbody>`;
+
+  for (const s of samples) {
+    html+=`<tr><td style="font-weight:500;color:#0F172A">${s}</td>`;
+    for (const p of params) {
+      const rows=data.filter(d=>d.sample===s&&d.param===p);
+      if (!rows.length) { html+=`<td class="hm-td hm-empty" colspan="2">—</td>`; continue; }
+      const avgD=avg(rows.map(d=>Math.abs(d.diff)));
+      const avgR=avg(rows.map(d=>Math.abs(d.rpd)));
+      const avgN=avg(rows.map(d=>d.nir)), avgL=avg(rows.map(d=>d.lab));
+      const st=getStatus(p,avgN,avgL,avgD,avgR);
+      html+=`<td class="hm-td hm-${st}">${fmt(avgD,3)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div></div>';
+  panel.innerHTML=html;
+}
+
+function buildTable(data, panel) {
+  if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
+  let html=`<div class="table-container">
+    <div class="table-header">
+      <span class="table-title">Raw Data</span>
+      <span class="table-count">${data.length} rows</span>
+    </div>
+    <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Date</th><th>Group</th><th>Sample</th><th>Parameter</th>
+      <th>NIR</th><th>Lab</th><th>|Diff|</th><th>|%RPD|</th>
+      <th>Threshold</th><th>Status</th>
+    </tr></thead><tbody>`;
+
+  for (const d of data) {
+    const st=getStatus(d.param,d.nir,d.lab,d.diff,d.rpd);
+    const th=thLabel(d.param,d.nir,d.lab);
+    html+=`<tr>
+      <td class="td-mono">${esc(d.day)}</td>
+      <td style="color:#64748B">${esc(GROUP_NAMES[d.group]||'—')}</td>
+      <td style="font-weight:500">${esc(d.sample)}</td>
+      <td><span style="background:#F1F5F9;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">${esc(d.param)}</span></td>
+      <td class="td-mono" style="color:#1E40AF">${fmt(d.nir)}</td>
+      <td class="td-mono">${fmt(d.lab)}</td>
+      <td class="td-mono cell-${st}">${fmt(Math.abs(d.diff),3)}</td>
+      <td class="td-mono cell-${st}">${fmt(Math.abs(d.rpd),2)}%</td>
+      <td style="font-size:11px;color:#94A3B8">${th}</td>
+      <td>${badgeHtml(st)}</td>
+    </tr>`;
+  }
+  html+='</tbody></table></div></div>';
+  panel.innerHTML=html;
+}
+
+function buildCharts(data, panel) {
+  Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
+  chartInsts={};
+  if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
+  const days=[...new Set(data.map(d=>d.day))].sort();
+  const params=[...new Set(data.map(d=>d.param))];
+
+  let html='<div class="chart-grid">';
+  params.forEach((_,i)=>html+=`
+    <div class="chart-card">
+      <div class="chart-card-title" id="ct${i}"></div>
+      <div class="chart-legend" id="cl${i}"></div>
+      <div style="position:relative;height:200px"><canvas id="cc${i}"></canvas></div>
+    </div>`);
+  html+='</div>';
+  panel.innerHTML=html;
+
+  params.forEach((p,i)=>{
+    const el=document.getElementById('cc'+i);
+    const tl=document.getElementById('ct'+i);
+    const ll=document.getElementById('cl'+i);
+    if (!el||!tl||!ll) return;
+    tl.textContent=`${p} — NIR vs Lab`;
+    ll.innerHTML=`
+      <span><span class="chart-legend-dot" style="background:#1E40AF;display:inline-block"></span>NIR</span>
+      <span><span class="chart-legend-dot" style="background:#16A34A;display:inline-block;border-top:2px dashed #16A34A;background:transparent"></span>Lab</span>
+      <span><span class="chart-legend-dot" style="background:#D97706;display:inline-block"></span>%RPD</span>`;
+    const ag=arr=>arr.length?+(arr.reduce((a,v)=>a+v,0)/arr.length).toFixed(2):null;
+    const nirD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.nir)):null;});
+    const labD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.lab)):null;});
+    const rpdD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?+(ag(rs.map(d=>Math.abs(d.rpd)))).toFixed(2):null;});
+
+    chartInsts['c'+i]=new Chart(el,{
+      type:'line',
+      data:{labels:days,datasets:[
+        {label:'NIR',data:nirD,borderColor:'#1E40AF',backgroundColor:'rgba(30,64,175,.06)',tension:.35,pointRadius:4,pointBackgroundColor:'#1E40AF',borderWidth:2,yAxisID:'y'},
+        {label:'Lab',data:labD,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.04)',tension:.35,pointRadius:4,borderDash:[5,4],pointBackgroundColor:'#16A34A',borderWidth:2,yAxisID:'y'},
+        {label:'%RPD',data:rpdD,borderColor:'#D97706',backgroundColor:'rgba(217,119,6,.05)',tension:.35,pointRadius:3,pointBackgroundColor:'#D97706',borderWidth:1.5,yAxisID:'y2'}
+      ]},
+      options:{
+        responsive:true,maintainAspectRatio:false,spanGaps:true,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'#fff',borderColor:'#E2E8F0',borderWidth:1,
+            titleColor:'#0F172A',bodyColor:'#374151',
+            padding:10,cornerRadius:8,
+            callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y!==null?ctx.parsed.y:'—'}`}
+          }
+        },
+        scales:{
+          x:{ticks:{color:'#94A3B8',font:{size:10,family:'Inter'},maxRotation:30},grid:{color:'#F1F5F9'}},
+          y:{ticks:{color:'#94A3B8',font:{size:10,family:'Inter'}},grid:{color:'#F1F5F9'}},
+          y2:{position:'right',ticks:{color:'#D97706',font:{size:10,family:'Inter'},callback:v=>v+'%'},grid:{drawOnChartArea:false}}
+        }
+      }
+    });
+  });
+}
+
+function toast(msg, type='ok') {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+type;
+  setTimeout(()=>el.className='toast',3200);
+}
+
+function showSkeleton() {
+  const c = document.getElementById('content');
+  c.style.padding = '28px';
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px';
+  for (let i = 0; i < 4; i++) {
+    grid.innerHTML += `<div class="skeleton-card"><div class="skeleton sk-line sk-val"></div><div class="skeleton sk-sub" style="margin-top:10px"></div></div>`;
+  }
+  c.appendChild(grid);
+  const grid2 = document.createElement('div');
+  grid2.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px';
+  for (let i = 0; i < 4; i++) {
+    grid2.innerHTML += `<div class="skeleton-card"><div class="skeleton sk-line" style="width:40%;margin-bottom:14px"></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${'<div class="skeleton" style="height:54px"></div>'.repeat(4)}</div></div>`;
+  }
+  c.appendChild(grid2);
+}
+
+function clearData() {
+  if (!confirm('Clear all uploaded data and start fresh?')) return;
+  allRows = []; activeGroup = 0; activeSample = ''; currentTab = 0;
+  Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
+  chartInsts = {};
+  document.getElementById('wkSel').innerHTML = '<option value="">All Dates</option>';
+  document.getElementById('pmSel').innerHTML = '<option value="">All Parameters</option>';
+  document.getElementById('weekChips').innerHTML = '';
+  document.getElementById('topCtx').textContent = '— All Groups';
+  document.querySelectorAll('.sample-list').forEach(el=>el.innerHTML='');
+  document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active','open'));
+  document.querySelectorAll('.sample-list').forEach(el=>el.classList.remove('open'));
+  document.getElementById('grp-0').classList.add('active');
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('uploadScreen').style.display = 'flex';
+  document.getElementById('clearBtn').style.display = 'none';
+  toast('Data cleared', 'ok');
+}
+
+function loadDemo() {
+  const csv=`Day,Sample,Brix-NIR,Brix-Lab,Brix-Diff,Brix-%RPD,Pol-NIR,Pol-Lab,Pol-Diff,Pol-%RPD,Purity-NIR,Purity-Lab,Purity-Diff,Purity-%RPD,Color-NIR,Color-Lab,Color-Diff,%Moisture-NIR,%Moisture-Lab,Moisture-Diff,%TSAI-NIR,%TSAI-Lab,%TSAI-Diff,%RS-NIR,%RS-Lab,%RS-Diff
+05/03/2026,Juice- Liming,14.88,14.83,0.05,0.35,12.41,12.47,-0.06,0.5,83.38,84.2,-0.82,0.97,,,,,,,,,,,,
+05/03/2026,Juice- Clarified,14.7,14.74,-0.04,0.26,11.94,12.47,-0.54,4.39,81.21,84.44,-3.23,3.9,,,,,,,,,,,,
+05/03/2026,Syrup- Raw,62.77,62.02,0.75,1.21,53.8,52.76,1.04,1.96,85.75,85.16,0.59,0.69,,,,,,,,,,,,
+05/03/2026,Liquor- Remelt,55.57,55.78,-0.21,0.8,55.48,55.47,0.01,0.01,99.84,99.43,0.41,0.41,1395,1452,-62.25,,,,,,,,,
+05/03/2026,Liquor- Fine,52.23,52.25,-0.02,0.04,51.91,51.91,0,0.01,99.38,99.5,-0.11,0.11,193,168,25.77,,,,,,,,,
+05/03/2026,Massecuite- A,91.22,91.39,-0.17,0.19,79.74,79.83,-0.09,0.11,87.42,87.33,0.09,0.1,,,,,,,,,,,,
+05/03/2026,Massecuite- C,94.79,95.55,-0.76,0.8,51.52,54.23,-2.71,5.13,54.36,56.8,-2.44,4.4,,,,,,,,,,,,
+05/03/2026,Molasses- A,79.64,79.62,0.02,0.02,57.25,57.48,-0.24,0.41,71.88,72.04,-0.16,0.22,,,,,,,,,,,,
+05/03/2026,Molasses- C,83.96,84.18,-0.22,0.26,26.17,26.38,-0.21,0.79,31.15,31.33,-0.19,0.59,,,,,,,,,,,,
+05/03/2026,Sugar- Refined,,,,,99.96,99.97,-0.01,0.01,,,,,24,23,1.31,0.03,0.03,0,,,,,,
+05/03/2026,Sugar- Raw,,,,,99.25,99.25,0,0,,,,,1347,1356,-8.35,0.17,0.25,-0.08,,,,,,
+05/03/2026,Seed- A A1,89.09,89.48,-0.39,0.44,78.62,78.94,-0.32,0.4,88.26,88.22,0.03,0.04,,,,,,,,,,,,
+05/03/2026,Suction- A,81.49,81.41,0.08,0.09,56.73,57.11,-0.38,0.66,69.63,70.16,-0.53,0.53,,,,,,,,,,,,
+12/03/2026,Juice- Liming,15.01,15.01,0,0.01,12.68,12.53,0.14,1.14,84.47,84.37,0.1,0.12,,,,,,,,,,,,
+12/03/2026,Juice- Clarified,15.05,15.05,0,0.01,12.35,12.61,-0.26,2.12,81.95,83.84,-1.88,2.27,,,,,,,,,,,,
+12/03/2026,Liquor- Remelt,56.1,55.9,0.2,0.36,55.9,55.7,0.2,0.36,99.64,99.64,0,0,1420,1380,40,,,,,,,,,
+12/03/2026,Massecuite- A,90.8,91.1,-0.3,0.33,80.1,80.3,-0.2,0.25,88.2,88.3,-0.1,0.11,,,,,,,,,,,,
+12/03/2026,Molasses- A,80.1,80.0,0.1,0.12,57.8,57.5,0.3,0.52,72.2,71.9,0.3,0.42,,,,,,,,,,,,
+12/03/2026,Sugar- Raw,,,,,99.3,99.2,0.1,0.1,,,,,1360,1370,-10,0.18,0.24,-0.06,,,,,,
+19/03/2026,Juice- Liming,14.95,14.9,0.05,0.33,12.55,12.48,0.07,0.56,84.1,83.9,0.2,0.24,,,,,,,,,,,,
+19/03/2026,Liquor- Remelt,56.3,56.0,0.3,0.53,56.0,55.8,0.2,0.36,99.5,99.6,-0.1,0.1,1380,1400,-20,,,,,,,,,
+19/03/2026,Massecuite- C,95.1,96.2,-1.1,1.15,52.0,55.0,-3.0,5.6,54.7,57.1,-2.4,4.3,,,,,,,,,,,,
+19/03/2026,Sugar- Raw,,,,,99.4,99.3,0.1,0.1,,,,,1320,1340,-20,0.16,0.22,-0.06,,,,,,`;
+  Papa.parse(csv,{header:true,skipEmptyLines:true,complete(res){
+    allRows=parseCSV(res.data);
+    refreshFilters(); buildSidebarSamples(); showDashboard(); render();
+    toast('Demo data loaded — 3 weeks','ok');
+    const cb=document.getElementById('clearBtn'); if(cb) cb.style.display='block';
+  }});
+}
+</script>
+</body>
+</html>
