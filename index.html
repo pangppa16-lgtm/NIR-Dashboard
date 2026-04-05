@@ -418,6 +418,16 @@ tbody tr:hover td { background: #F8FAFC; }
   color: #94A3B8; cursor: pointer; transition: all .15s; white-space: nowrap;
 }
 .clear-btn:hover { background: #FEF2F2; border-color: #FECACA; color: #DC2626; }
+.th-ref-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+  padding: 0 14px; height: 34px;
+  background: var(--c-bg-surface); border: 1px solid var(--c-border);
+  border-radius: var(--r-md); color: var(--c-text-2);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.th-ref-btn:hover { background: var(--c-primary-light); border-color: var(--c-primary-mid); color: var(--c-primary); }
+.th-ref-btn svg { width: 14px; height: 14px; }
 
 @media (max-width: 768px) {
   #sidebar { width: 0; min-width: 0; overflow: hidden; transition: width .25s; position: absolute; z-index: 100; height: 100vh; }
@@ -438,6 +448,73 @@ tbody tr:hover td { background: #F8FAFC; }
 }
 .menu-toggle svg { width: 16px; height: 16px; color: #374151; }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+.overview-card { user-select: none; }
+.overview-card:active { transform: scale(0.98) !important; }
+
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,0.45);
+  z-index: 200; align-items: center; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal-box {
+  background: var(--c-bg-card); border-radius: var(--r-lg);
+  width: 92%; max-width: 860px; max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+.modal-head {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; gap: 12px;
+}
+.modal-head-title { font-size: 15px; font-weight: 600; flex: 1; }
+.modal-head-sub { font-size: 12px; color: var(--c-text-3); }
+.modal-close {
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: 1px solid var(--c-border); background: transparent;
+  cursor: pointer; font-size: 16px; color: var(--c-text-3);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.modal-close:hover { background: var(--c-bg-surface); color: var(--c-text-1); }
+.modal-body { overflow-y: auto; padding: 18px 22px; flex: 1; }
+.modal-section { margin-bottom: 22px; }
+.modal-section-title {
+  font-size: 11px; font-weight: 600; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--c-text-3);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.modal-section-title::after {
+  content: ''; flex: 1; height: 1px; background: var(--c-border);
+}
+.th-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.th-table thead th {
+  padding: 7px 10px; font-size: 10px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--c-text-3); background: var(--c-bg-surface);
+  border-bottom: 1px solid var(--c-border); text-align: center;
+}
+.th-table thead th:first-child { text-align: left; }
+.th-table tbody td {
+  padding: 6px 10px; border-bottom: 0.5px solid var(--c-border-light);
+  text-align: center; color: var(--c-text-2); font-family: 'SF Mono','Fira Code',monospace; font-size: 11px;
+}
+.th-table tbody td:first-child { text-align: left; font-family: inherit; font-weight: 500; color: var(--c-text-1); }
+.th-table tbody tr:last-child td { border-bottom: none; }
+.th-table tbody tr:hover td { background: var(--c-bg-surface); }
+.cell-good  { color: var(--c-good-text) !important; font-weight: 600; }
+.cell-fair  { color: var(--c-fair-text) !important; font-weight: 600; }
+.cell-alert { color: var(--c-alert-text)!important; font-weight: 600; }
+.th-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 10px; font-weight: 500;
+}
+.th-pill-good  { background: var(--c-good-bg);  color: var(--c-good-text);  border: 1px solid var(--c-good-border); }
+.th-pill-fair  { background: var(--c-fair-bg);  color: var(--c-fair-text);  border: 1px solid var(--c-fair-border); }
+.th-pill-alert { background: var(--c-alert-bg); color: var(--c-alert-text); border: 1px solid var(--c-alert-border); }
 ::selection { background: var(--c-primary-light); color: var(--c-primary); }
 </style>
 </head>
@@ -605,12 +682,17 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
     <select class="tb-select" id="wkSel" onchange="render()"><option value="">All Dates</option></select>
     <select class="tb-select" id="pmSel" onchange="render()"><option value="">All Parameters</option></select>
     <button class="clear-btn" onclick="clearData()" id="clearBtn" style="display:none">Clear Data</button>
+    <button class="th-ref-btn" onclick="openModal()" title="ดูค่าควบคุม">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      ค่าควบคุม
+    </button>
     <button class="upload-trigger" onclick="document.getElementById('fileInput').click()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
       Upload CSV
     </button>
     <input type="file" id="fileInput" accept=".csv" multiple style="display:none" onchange="handleUpload(event)">
     <div id="weekChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <span id="statusInd" style="display:none"></span>
   </div>
 
   <!-- UPLOAD SCREEN -->
@@ -642,16 +724,125 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
 
 <div id="toast"></div>
 
+<div class="modal-backdrop" id="thModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-head-title">ตารางค่าควบคุม (Threshold Reference)</div>
+        <div class="modal-head-sub">เกณฑ์การประเมินคุณภาพ NIR vs Lab</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-section">
+        <div class="modal-section-title">Brix &amp; Pol</div>
+        <table class="th-table">
+          <thead><tr>
+            <th>ช่วงค่า</th><th>Max Diff</th>
+            <th><span class="th-pill th-pill-good">Good</span></th>
+            <th><span class="th-pill th-pill-fair">Fair</span></th>
+            <th><span class="th-pill th-pill-alert">Alert</span></th>
+          </tr></thead>
+          <tbody>
+            <tr><td>0 – 5</td><td>≤ 0.50</td><td class="cell-good">RPD ≤ 5%</td><td class="cell-fair">5 – 10%</td><td class="cell-alert">≥ 10%</td></tr>
+            <tr><td>6 – 9</td><td>≤ 1.00</td><td class="cell-good">RPD ≤ 5%</td><td class="cell-fair">5 – 10%</td><td class="cell-alert">≥ 10%</td></tr>
+            <tr><td>10 – 15</td><td>≤ 1.20</td><td class="cell-good">RPD ≤ 5%</td><td class="cell-fair">5 – 10%</td><td class="cell-alert">≥ 10%</td></tr>
+            <tr><td>16 – 20</td><td>≤ 1.30</td><td class="cell-good">RPD ≤ 5%</td><td class="cell-fair">5 – 10%</td><td class="cell-alert">≥ 10%</td></tr>
+            <tr><td>21 – 35</td><td>≤ 1.30</td><td class="cell-good">RPD ≤ 3%</td><td class="cell-fair">3 – 5%</td><td class="cell-alert">≥ 5%</td></tr>
+            <tr><td>36 – 50</td><td>≤ 1.50</td><td class="cell-good">RPD ≤ 3%</td><td class="cell-fair">3 – 5%</td><td class="cell-alert">≥ 5%</td></tr>
+            <tr><td>51 – 60</td><td>≤ 1.80</td><td class="cell-good">RPD ≤ 2%</td><td class="cell-fair">2 – 4%</td><td class="cell-alert">≥ 4%</td></tr>
+            <tr><td>61 – 75</td><td>≤ 1.70</td><td class="cell-good">RPD ≤ 1.5%</td><td class="cell-fair">1.5 – 3%</td><td class="cell-alert">≥ 3%</td></tr>
+            <tr><td>76 – 80</td><td>≤ 2.00</td><td class="cell-good">RPD ≤ 1.5%</td><td class="cell-fair">1.5 – 3%</td><td class="cell-alert">≥ 3%</td></tr>
+            <tr><td>81 – 90</td><td>≤ 2.00</td><td class="cell-good">RPD ≤ 1.25%</td><td class="cell-fair">1.25 – 2.5%</td><td class="cell-alert">≥ 2.5%</td></tr>
+            <tr><td>91 ขึ้นไป</td><td>≤ 1.70</td><td class="cell-good">RPD ≤ 1%</td><td class="cell-fair">1 – 2%</td><td class="cell-alert">≥ 2%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Color (IU)</div>
+        <table class="th-table">
+          <thead><tr><th>ช่วงค่า Color</th><th><span class="th-pill th-pill-good">Good</span></th><th><span class="th-pill th-pill-fair">Fair</span></th><th><span class="th-pill th-pill-alert">Alert</span></th></tr></thead>
+          <tbody>
+            <tr><td>0 – 50</td><td class="cell-good">Diff ≤ 3</td><td class="cell-fair">3 – 4.5</td><td class="cell-alert">≥ 4.5</td></tr>
+            <tr><td>51 – 70</td><td class="cell-good">Diff ≤ 5</td><td class="cell-fair">5 – 7.5</td><td class="cell-alert">≥ 7.5</td></tr>
+            <tr><td>71 – 100</td><td class="cell-good">Diff ≤ 7</td><td class="cell-fair">7 – 10.5</td><td class="cell-alert">≥ 10.5</td></tr>
+            <tr><td>101 – 300</td><td class="cell-good">Diff ≤ 70</td><td class="cell-fair">70 – 105</td><td class="cell-alert">≥ 105</td></tr>
+            <tr><td>301 – 500</td><td class="cell-good">Diff ≤ 100</td><td class="cell-fair">100 – 150</td><td class="cell-alert">≥ 150</td></tr>
+            <tr><td>501 – 800</td><td class="cell-good">Diff ≤ 130</td><td class="cell-fair">130 – 195</td><td class="cell-alert">≥ 195</td></tr>
+            <tr><td>801 – 1,000</td><td class="cell-good">Diff ≤ 150</td><td class="cell-fair">150 – 225</td><td class="cell-alert">≥ 225</td></tr>
+            <tr><td>1,001 – 1,500</td><td class="cell-good">Diff ≤ 200</td><td class="cell-fair">200 – 300</td><td class="cell-alert">≥ 300</td></tr>
+            <tr><td>1,501 – 2,500</td><td class="cell-good">Diff ≤ 250</td><td class="cell-fair">250 – 375</td><td class="cell-alert">≥ 375</td></tr>
+            <tr><td>2,501 – 3,500</td><td class="cell-good">Diff ≤ 300</td><td class="cell-fair">300 – 450</td><td class="cell-alert">≥ 450</td></tr>
+            <tr><td>3,501 – 5,000</td><td class="cell-good">Diff ≤ 450</td><td class="cell-fair">450 – 675</td><td class="cell-alert">≥ 675</td></tr>
+            <tr><td>5,001 – 6,000</td><td class="cell-good">Diff ≤ 550</td><td class="cell-fair">550 – 825</td><td class="cell-alert">≥ 825</td></tr>
+            <tr><td>6,001 – 7,000</td><td class="cell-good">Diff ≤ 650</td><td class="cell-fair">650 – 975</td><td class="cell-alert">≥ 975</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div class="modal-section">
+          <div class="modal-section-title">%Moisture</div>
+          <table class="th-table">
+            <thead><tr><th>ช่วงค่า</th><th><span class="th-pill th-pill-good">Good</span></th><th><span class="th-pill th-pill-fair">Fair</span></th><th><span class="th-pill th-pill-alert">Alert</span></th></tr></thead>
+            <tbody>
+              <tr><td>≤ 0.04</td><td class="cell-good">≤ 0.01</td><td class="cell-fair">0.01–0.02</td><td class="cell-alert">≥ 0.02</td></tr>
+              <tr><td>0.05 – 0.10</td><td class="cell-good">≤ 0.03</td><td class="cell-fair">0.03–0.06</td><td class="cell-alert">≥ 0.06</td></tr>
+              <tr><td>0.11 – 0.20</td><td class="cell-good">≤ 0.05</td><td class="cell-fair">0.05–0.10</td><td class="cell-alert">≥ 0.10</td></tr>
+              <tr><td>0.21 – 0.40</td><td class="cell-good">≤ 0.07</td><td class="cell-fair">0.07–0.14</td><td class="cell-alert">≥ 0.14</td></tr>
+              <tr><td>0.41 – 0.60</td><td class="cell-good">≤ 0.10</td><td class="cell-fair">0.10–0.20</td><td class="cell-alert">≥ 0.20</td></tr>
+              <tr><td>0.61 – 1.00</td><td class="cell-good">≤ 0.15</td><td class="cell-fair">0.15–0.30</td><td class="cell-alert">≥ 0.30</td></tr>
+              <tr><td>1.01 – 1.50</td><td class="cell-good">≤ 0.20</td><td class="cell-fair">0.20–0.40</td><td class="cell-alert">≥ 0.40</td></tr>
+              <tr><td>1.51 – 2.00</td><td class="cell-good">≤ 0.30</td><td class="cell-fair">0.30–0.60</td><td class="cell-alert">≥ 0.60</td></tr>
+              <tr><td>2.01 – 3.50</td><td class="cell-good">≤ 0.50</td><td class="cell-fair">0.50–1.00</td><td class="cell-alert">≥ 1.00</td></tr>
+              <tr><td>45.00 – 55.00</td><td class="cell-good">≤ 1.50</td><td class="cell-fair">1.50–3.00</td><td class="cell-alert">≥ 3.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">TSAI &amp; RS</div>
+          <table class="th-table">
+            <thead><tr><th>Parameter</th><th><span class="th-pill th-pill-good">Good</span></th><th><span class="th-pill th-pill-fair">Fair</span></th><th><span class="th-pill th-pill-alert">Alert</span></th></tr></thead>
+            <tbody>
+              <tr><td>%TSAI</td><td class="cell-good">Diff ≤ 2.00</td><td class="cell-fair">2.00–4.00</td><td class="cell-alert">≥ 4.00</td></tr>
+              <tr><td>%RS</td><td class="cell-good">Diff ≤ 1.50</td><td class="cell-fair">1.50–3.00</td><td class="cell-alert">≥ 3.00</td></tr>
+            </tbody>
+          </table>
+          <div class="modal-section" style="margin-top:18px">
+            <div class="modal-section-title">Purity</div>
+            <table class="th-table">
+              <thead><tr><th>Parameter</th><th><span class="th-pill th-pill-good">Good</span></th><th><span class="th-pill th-pill-fair">Fair</span></th><th><span class="th-pill th-pill-alert">Alert</span></th></tr></thead>
+              <tbody>
+                <tr><td>%Purity</td><td class="cell-good">RPD ≤ 2%</td><td class="cell-fair">2–5%</td><td class="cell-alert">≥ 5%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 const PARAMS = ['Brix','Pol','Purity','Color','Moisture','TSAI','RS'];
 const GROUP_NAMES = {0:'All Groups',1:'Juice / Syrup',2:'Liquor',3:'Seed',4:'Massecuite',5:'Molasses',6:'Suction',7:'Sugar',8:'Waste / By-products'};
 const GRP_KEYS = {1:['juice','syrup'],2:['liquor'],3:['seed'],4:['massecuite','mass'],5:['molasses','mol'],6:['suction'],7:['sugar'],8:['bagasse','filter','waste']};
 
 const BRIX_POL_TH = [
-  {r:[0,20],diff:1.30,rpd:{g:5,f:10}},
-  {r:[21,50],diff:1.50,rpd:{g:3,f:5}},
-  {r:[51,90],diff:2.00,rpd:{g:1.5,f:3}},
-  {r:[91,999],diff:1.70,rpd:{g:1,f:2}}
+  {r:[0,5],    diff:0.50, rpd:{g:5,   f:10}},
+  {r:[6,9],    diff:1.00, rpd:{g:5,   f:10}},
+  {r:[10,15],  diff:1.20, rpd:{g:5,   f:10}},
+  {r:[16,20],  diff:1.30, rpd:{g:5,   f:10}},
+  {r:[21,35],  diff:1.30, rpd:{g:3,   f:5}},
+  {r:[36,50],  diff:1.50, rpd:{g:3,   f:5}},
+  {r:[51,60],  diff:1.80, rpd:{g:2,   f:4}},
+  {r:[61,75],  diff:1.70, rpd:{g:1.5, f:3}},
+  {r:[76,80],  diff:2.00, rpd:{g:1.5, f:3}},
+  {r:[81,90],  diff:2.00, rpd:{g:1.25,f:2.5}},
+  {r:[91,9999],diff:1.70, rpd:{g:1,   f:2}}
 ];
 const COLOR_TH = [
   {r:[0,50],d:3},{r:[51,70],d:5},{r:[71,100],d:7},{r:[101,300],d:70},
@@ -703,7 +894,7 @@ function thLabel(param, nir, lab) {
 function statusLabel(s) { return {g:'Good',y:'Fair',r:'Alert'}[s]||'?'; }
 function badgeHtml(s) { return `<span class="badge ${s}">${statusLabel(s)}</span>`; }
 
-let allRows=[], activeGroup=0, activeSample='', currentTab=0, chartInsts={};
+let allRows=[], activeGroup=0, activeSample='', currentTab=0, chartInsts={}, activeStatus='';
 
 function getGroup(s) {
   const sl=(s||'').toLowerCase();
@@ -810,12 +1001,24 @@ function getFiltered() {
     if (activeSample&&d.sample!==activeSample) return false;
     if (wf&&d.day!==wf) return false;
     if (pf&&d.param!==pf) return false;
+    if (activeStatus&&d.status!==activeStatus) return false;
+    return true;
+  });
+}
+function getFilteredNoStatus() {
+  const wf=document.getElementById('wkSel').value;
+  const pf=document.getElementById('pmSel').value;
+  return allRows.filter(d=>{
+    if (activeGroup!==0&&d.group!==activeGroup) return false;
+    if (activeSample&&d.sample!==activeSample) return false;
+    if (wf&&d.day!==wf) return false;
+    if (pf&&d.param!==pf) return false;
     return true;
   });
 }
 
 function selGroup(g, btn) {
-  activeGroup=g; activeSample='';
+  activeGroup=g; activeSample=''; activeStatus='';
   document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active','open'));
   document.querySelectorAll('.sample-list').forEach(el=>el.classList.remove('open'));
   btn.classList.add('active');
@@ -830,7 +1033,7 @@ function toggleGroup(g, btn) {
   document.getElementById('grp-0').classList.remove('active');
   if (!wasOpen) {
     sl.classList.add('open'); btn.classList.add('open','active');
-    activeGroup=g; activeSample=''; hlSamples(); render();
+    activeGroup=g; activeSample=''; activeStatus=''; hlSamples(); render();
   } else {
     activeGroup=0; activeSample='';
     document.getElementById('grp-0').classList.add('active'); render();
@@ -838,7 +1041,7 @@ function toggleGroup(g, btn) {
 }
 
 function selSample(s, btn) {
-  activeSample = s;
+  activeSample = s; activeStatus = '';
   // ensure activeGroup matches the sample's group so getFiltered works
   const grp = allRows.find(d => d.sample === s);
   if (grp && activeGroup === 0) activeGroup = grp.group;
@@ -854,6 +1057,13 @@ function hlSamples() {
 
 function switchTab(i) {
   currentTab=i;
+  // Clear status filter when leaving Data Table tab
+  if (i !== 2 && activeStatus) {
+    activeStatus = '';
+    const ind = document.getElementById('statusInd');
+    if (ind) ind.style.display = 'none';
+    render(); return;
+  }
   document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
   document.querySelectorAll('.tab-panel').forEach((p,j)=>p.style.display=j===i?'block':'none');
 }
@@ -865,7 +1075,8 @@ function showDashboard() {
 
 function render() {
   if (!allRows.length) return;
-  const data = getFiltered();
+  const data = getFiltered();           // full filtered data (used by table)
+  const dataNoStatus = getFilteredNoStatus(); // data without status filter (used by summary/heatmap/charts)
   const ctx = activeSample ? activeSample : (GROUP_NAMES[activeGroup] || 'All Groups');
   document.getElementById('topCtx').textContent = '— ' + ctx;
 
@@ -910,10 +1121,10 @@ function render() {
     return d;
   });
 
-  buildSummary(data, panels[0]);
-  buildHeatmap(data, panels[1]);
+  buildSummary(dataNoStatus, panels[0]);
+  buildHeatmap(dataNoStatus, panels[1]);
   buildTable(data, panels[2]);
-  buildCharts(data, panels[3]);
+  buildCharts(dataNoStatus, panels[3]);
 }
 
 function avg(arr) { return arr.length ? arr.reduce((a,v)=>a+v,0)/arr.length : 0; }
@@ -926,11 +1137,24 @@ function buildSummary(data, panel) {
   const tot=data.length;
   const pct=n=>tot?Math.round((n||0)/tot*100):0;
 
+  const cardStyle = 'cursor:pointer;transition:transform .15s,box-shadow .15s';
   let html=`<div class="overview-grid">
-    <div class="overview-card"><div class="ov-label">Total Measurements</div><div class="ov-val" style="color:#1E40AF">${tot}</div><div class="ov-sub">across all parameters</div></div>
-    <div class="overview-card ov-good"><div class="ov-label">Good</div><div class="ov-val">${sc.g||0}</div><div class="ov-sub">${pct(sc.g)}% of total</div></div>
-    <div class="overview-card ov-fair"><div class="ov-label">Fair</div><div class="ov-val">${sc.y||0}</div><div class="ov-sub">${pct(sc.y)}% of total</div></div>
-    <div class="overview-card ov-alert"><div class="ov-label">Alert</div><div class="ov-val">${sc.r||0}</div><div class="ov-sub">${pct(sc.r)}% of total</div></div>
+    <div class="overview-card" style="${cardStyle}" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''" onclick="goToStatus('')">
+      <div class="ov-label">Total Measurements</div><div class="ov-val" style="color:var(--c-primary)">${tot}</div>
+      <div class="ov-sub">click to show all</div>
+    </div>
+    <div class="overview-card ov-good" style="${cardStyle}" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''" onclick="goToStatus('g')">
+      <div class="ov-label">Good</div><div class="ov-val">${sc.g||0}</div>
+      <div class="ov-sub">${pct(sc.g)}% &nbsp;·&nbsp; <span style="font-size:10px;opacity:.7">click to filter</span></div>
+    </div>
+    <div class="overview-card ov-fair" style="${cardStyle}" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''" onclick="goToStatus('y')">
+      <div class="ov-label">Fair</div><div class="ov-val">${sc.y||0}</div>
+      <div class="ov-sub">${pct(sc.y)}% &nbsp;·&nbsp; <span style="font-size:10px;opacity:.7">click to filter</span></div>
+    </div>
+    <div class="overview-card ov-alert" style="${cardStyle}" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''" onclick="goToStatus('r')">
+      <div class="ov-label">Alert</div><div class="ov-val">${sc.r||0}</div>
+      <div class="ov-sub">${pct(sc.r)}% &nbsp;·&nbsp; <span style="font-size:10px;opacity:.7">click to filter</span></div>
+    </div>
   </div>`;
 
   const byParam={};
@@ -1056,7 +1280,7 @@ function buildTable(data, panel) {
   let html=`<div class="table-container">
     <div class="table-header">
       <span class="table-title">Raw Data</span>
-      <span class="table-count">${data.length} rows</span>
+      <span class="table-count">${data.length} rows${activeStatus ? ' &nbsp;(filtered: <b>'+{g:'Good',y:'Fair',r:'Alert'}[activeStatus]+'</b>)' : ''}</span>
     </div>
     <div class="table-wrap"><table>
     <thead><tr>
@@ -1146,6 +1370,16 @@ function buildCharts(data, panel) {
   });
 }
 
+function openModal() {
+  document.getElementById('thModal').classList.add('open');
+  document.addEventListener('keydown', _modalKeyClose);
+}
+function closeModal() {
+  document.getElementById('thModal').classList.remove('open');
+  document.removeEventListener('keydown', _modalKeyClose);
+}
+function _modalKeyClose(e) { if (e.key === 'Escape') closeModal(); }
+
 function toast(msg, type='ok') {
   const el=document.getElementById('toast');
   el.textContent=msg; el.className='toast show '+type;
@@ -1170,9 +1404,30 @@ function showSkeleton() {
   c.appendChild(grid2);
 }
 
+function goToStatus(s) {
+  activeStatus = s;
+  currentTab = 2;
+  render();
+  // Update status filter indicator in topbar
+  const ind = document.getElementById('statusInd');
+  if (ind) {
+    if (s) {
+      const labels = {g:'Good',y:'Fair',r:'Alert'};
+      const colors = {g:'var(--c-good-text)',y:'var(--c-fair-text)',r:'var(--c-alert-text)'};
+      const bgs    = {g:'var(--c-good-bg)',y:'var(--c-fair-bg)',r:'var(--c-alert-bg)'};
+      const borders= {g:'var(--c-good-border)',y:'var(--c-fair-border)',r:'var(--c-alert-border)'};
+      ind.style.cssText = `display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:${bgs[s]};color:${colors[s]};border:1px solid ${borders[s]};cursor:pointer`;
+      ind.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span>' + labels[s] + ' only &nbsp;✕';
+      ind.onclick = () => { activeStatus=''; ind.style.display='none'; render(); };
+    } else {
+      ind.style.display = 'none';
+    }
+  }
+}
+
 function clearData() {
   if (!confirm('Clear all uploaded data and start fresh?')) return;
-  allRows = []; activeGroup = 0; activeSample = ''; currentTab = 0;
+  allRows = []; activeGroup = 0; activeSample = ''; activeStatus = ''; currentTab = 0;
   Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
   chartInsts = {};
   document.getElementById('wkSel').innerHTML = '<option value="">All Dates</option>';
