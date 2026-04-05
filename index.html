@@ -1041,7 +1041,13 @@ function toggleGroup(g, btn) {
 }
 
 function selSample(s, btn) {
-  activeSample = s; activeStatus = '';
+  activeStatus = '';
+  // If clicking the already-active sample → deselect (toggle off)
+  if (activeSample === s) {
+    activeSample = '';
+    hlSamples(); render(); return;
+  }
+  activeSample = s;
   // ensure activeGroup matches the sample's group so getFiltered works
   const grp = allRows.find(d => d.sample === s);
   if (grp && activeGroup === 0) activeGroup = grp.group;
