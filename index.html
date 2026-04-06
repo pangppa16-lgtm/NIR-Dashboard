@@ -66,6 +66,11 @@ body {
   background: var(--c-sidebar);
   display: flex; flex-direction: column;
   height: 100vh; overflow: hidden;
+  transition: width .25s ease, min-width .25s ease;
+  flex-shrink: 0;
+}
+#sidebar.collapsed {
+  width: 0; min-width: 0;
 }
 .sb-top {
   padding: 24px 20px 20px;
@@ -430,26 +435,75 @@ tbody tr:hover td { background: #F8FAFC; }
 .th-ref-btn svg { width: 14px; height: 14px; }
 
 @media (max-width: 768px) {
-  #sidebar { width: 0; min-width: 0; overflow: hidden; transition: width .25s; position: absolute; z-index: 100; height: 100vh; }
-  #sidebar.open { width: 260px; min-width: 260px; box-shadow: 4px 0 20px rgba(0,0,0,.15); }
+  #sidebar { position: absolute; z-index: 100; }
+  #sidebar:not(.collapsed) { box-shadow: 4px 0 20px rgba(0,0,0,.15); }
   #main { width: 100%; }
   .overview-grid { grid-template-columns: repeat(2, 1fr); }
   .param-grid { grid-template-columns: 1fr; }
   .chart-grid { grid-template-columns: 1fr; }
   #topbar { padding: 0 12px; gap: 8px; }
   #content { padding: 16px !important; }
-  .menu-toggle { display: flex !important; }
 }
 .menu-toggle {
-  display: none; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border: 1px solid #E2E8F0;
-  border-radius: 8px; background: transparent; cursor: pointer;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border: 1px solid var(--c-border);
+  border-radius: var(--r-md); background: transparent; cursor: pointer;
+  flex-shrink: 0; transition: all .15s;
 }
-.menu-toggle svg { width: 16px; height: 16px; color: #374151; }
+.menu-toggle:hover { background: var(--c-bg-surface); }
+.menu-toggle svg { width: 16px; height: 16px; color: var(--c-text-2); transition: transform .25s; }
+.menu-toggle.active svg { transform: rotate(90deg); }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
 .overview-card { user-select: none; }
 .overview-card:active { transform: scale(0.98) !important; }
+
+/* ── PRINT ── */
+@media print {
+  @page { size: A4 landscape; margin: 14mm 12mm; }
+  html, body { height: auto !important; overflow: visible !important; }
+  .app { display: block !important; height: auto !important; }
+  #sidebar, #topbar, .tabs, .modal-backdrop { display: none !important; }
+  #main { display: block !important; height: auto !important; overflow: visible !important; }
+  #dashboard { display: block !important; overflow: visible !important; }
+  #content { overflow: visible !important; padding: 0 !important; }
+  .tab-panel { display: block !important; }
+  .overview-grid { grid-template-columns: repeat(4,1fr) !important; }
+  .param-grid { grid-template-columns: repeat(2,1fr) !important; }
+  .chart-grid { grid-template-columns: repeat(2,1fr) !important; }
+  .chart-card, .param-card, .overview-card, .table-container { break-inside: avoid; }
+  .print-header { display: flex !important; }
+  canvas { max-width: 100% !important; }
+  .fade-in { animation: none !important; }
+}
+.print-header {
+  display: none;
+  align-items: center; justify-content: space-between;
+  padding-bottom: 10px; margin-bottom: 16px;
+  border-bottom: 2px solid #1E40AF;
+}
+.print-header-title { font-size: 16px; font-weight: 700; color: #1E40AF; }
+.print-header-sub { font-size: 11px; color: #64748B; margin-top: 2px; }
+.print-header-date { font-size: 11px; color: #64748B; text-align: right; }
+
+/* ── STORAGE BANNER ── */
+.storage-banner {
+  display: none; align-items: center; gap: 10px;
+  background: var(--c-primary-light); border: 1px solid var(--c-primary-mid);
+  border-radius: var(--r-md); padding: 8px 14px; margin-bottom: 14px;
+  font-size: 12px; color: var(--c-primary-text);
+}
+.storage-banner.show { display: flex; }
+.storage-banner svg { width: 14px; height: 14px; flex-shrink: 0; }
+.storage-banner-actions { display: flex; gap: 8px; margin-left: auto; }
+.sb-action-btn {
+  font-size: 11px; font-weight: 500; padding: 3px 10px;
+  border-radius: 20px; cursor: pointer; border: 1px solid;
+  transition: all .15s; background: transparent;
+}
+.sb-action-restore { border-color: var(--c-primary-mid); color: var(--c-primary-text); }
+.sb-action-restore:hover { background: var(--c-primary-light); }
+.sb-action-clear { border-color: var(--c-alert-border); color: var(--c-alert-text); }
+.sb-action-clear:hover { background: var(--c-alert-bg); }
 
 .modal-backdrop {
   display: none; position: fixed; inset: 0;
@@ -672,7 +726,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
 <div id="main">
   <!-- TOPBAR -->
   <div id="topbar">
-    <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" title="เปิด/ปิด Sidebar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="topbar-title">
@@ -682,6 +736,10 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
     <select class="tb-select" id="wkSel" onchange="render()"><option value="">All Dates</option></select>
     <select class="tb-select" id="pmSel" onchange="render()"><option value="">All Parameters</option></select>
     <button class="clear-btn" onclick="clearData()" id="clearBtn" style="display:none">Clear Data</button>
+    <button class="th-ref-btn" onclick="printDashboard()" title="พิมพ์ / บันทึก PDF">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print / PDF
+    </button>
     <button class="th-ref-btn" onclick="openModal()" title="ดูค่าควบคุม">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       ค่าควบคุม
@@ -718,6 +776,21 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
 
   <!-- DASHBOARD -->
   <div id="dashboard" style="display:none;flex:1;overflow-y:auto;">
+    <div id="printHeader" class="print-header" style="padding:0 28px;margin-top:20px">
+      <div>
+        <div class="print-header-title">NIR Lab Analytics Dashboard</div>
+        <div class="print-header-sub" id="printSubtitle">Sugar Processing Plant</div>
+      </div>
+      <div class="print-header-date" id="printDate"></div>
+    </div>
+    <div id="storageBanner" class="storage-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+      <span id="storageBannerText">พบข้อมูลที่บันทึกไว้ใน browser</span>
+      <div class="storage-banner-actions">
+        <button class="sb-action-btn sb-action-restore" onclick="restoreFromStorage()">โหลดข้อมูล</button>
+        <button class="sb-action-btn sb-action-clear" onclick="clearStorage()">ลบข้อมูลที่บันทึก</button>
+      </div>
+    </div>
     <div id="content"></div>
   </div>
 </div>
@@ -953,6 +1026,7 @@ function handleUpload(e) {
           toast('Loaded ' + files.length + ' file(s) — ' + added + ' new rows', 'ok');
           const cb = document.getElementById('clearBtn');
           if (cb) cb.style.display = 'block';
+          saveToStorage();
         } else {
           toast('No new data — rows may already be loaded', 'err');
         }
@@ -1376,6 +1450,97 @@ function buildCharts(data, panel) {
   });
 }
 
+// ── PRINT ──────────────────────────────────────────────────────────
+function printDashboard() {
+  const sub = document.getElementById('printSubtitle');
+  const dt  = document.getElementById('printDate');
+  if (sub) {
+    const ctx = activeSample || (activeGroup !== 0 ? GROUP_NAMES[activeGroup] : 'All Groups');
+    sub.textContent = 'Sugar Processing Plant — ' + ctx;
+  }
+  if (dt) {
+    const now = new Date();
+    dt.innerHTML = 'พิมพ์เมื่อ: ' + now.toLocaleDateString('th-TH', {day:'2-digit',month:'2-digit',year:'numeric'})
+      + '<br>' + now.toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
+  }
+  // Show all panels for print
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'block');
+  window.print();
+  // Restore tab visibility
+  setTimeout(() => {
+    document.querySelectorAll('.tab-panel').forEach((p,i) => p.style.display = i === currentTab ? 'block' : 'none');
+  }, 500);
+}
+
+// ── LOCAL STORAGE ───────────────────────────────────────────────────
+const STORAGE_KEY = 'nir_dashboard_data';
+const STORAGE_META_KEY = 'nir_dashboard_meta';
+
+function saveToStorage() {
+  if (!allRows.length) return;
+  try {
+    const meta = {
+      savedAt: new Date().toISOString(),
+      rowCount: allRows.length,
+      days: [...new Set(allRows.map(d=>d.day))].sort()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allRows));
+    localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));
+  } catch(e) {
+    console.warn('localStorage full:', e);
+  }
+}
+
+function restoreFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed.length) return;
+    allRows = parsed;
+    refreshFilters(); buildSidebarSamples(); showDashboard(); render();
+    hideBanner();
+    toast('โหลดข้อมูล ' + allRows.length + ' rows จาก browser', 'ok');
+  } catch(e) {
+    toast('โหลดข้อมูลไม่สำเร็จ', 'err');
+  }
+}
+
+function clearStorage() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_META_KEY);
+  hideBanner();
+  toast('ลบข้อมูลที่บันทึกไว้แล้ว', 'ok');
+}
+
+function hideBanner() {
+  const b = document.getElementById('storageBanner');
+  if (b) b.classList.remove('show');
+}
+
+function checkStorage() {
+  try {
+    const meta = localStorage.getItem(STORAGE_META_KEY);
+    if (!meta) return;
+    const m = JSON.parse(meta);
+    const banner = document.getElementById('storageBanner');
+    const txt    = document.getElementById('storageBannerText');
+    if (!banner || !txt) return;
+    const d = new Date(m.savedAt);
+    const dateStr = d.toLocaleDateString('th-TH', {day:'2-digit',month:'2-digit',year:'numeric'})
+      + ' ' + d.toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
+    txt.textContent = 'พบข้อมูลที่บันทึกไว้ — ' + m.rowCount + ' rows, ' + m.days.length + ' week(s) (' + dateStr + ')';
+    banner.classList.add('show');
+  } catch(e) {}
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('menuToggle');
+  sb.classList.toggle('collapsed');
+  btn.classList.toggle('active');
+}
+
 function openModal() {
   document.getElementById('thModal').classList.add('open');
   document.addEventListener('keydown', _modalKeyClose);
@@ -1434,6 +1599,7 @@ function goToStatus(s) {
 function clearData() {
   if (!confirm('Clear all uploaded data and start fresh?')) return;
   allRows = []; activeGroup = 0; activeSample = ''; activeStatus = ''; currentTab = 0;
+  localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STORAGE_META_KEY);
   Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
   chartInsts = {};
   document.getElementById('wkSel').innerHTML = '<option value="">All Dates</option>';
@@ -1480,8 +1646,11 @@ function loadDemo() {
     refreshFilters(); buildSidebarSamples(); showDashboard(); render();
     toast('Demo data loaded — 3 weeks','ok');
     const cb=document.getElementById('clearBtn'); if(cb) cb.style.display='block';
+    saveToStorage();
   }});
 }
+  // Check for saved data on page load
+  document.addEventListener('DOMContentLoaded', checkStorage);
 </script>
 </body>
 </html>
