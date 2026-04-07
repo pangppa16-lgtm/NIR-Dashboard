@@ -171,15 +171,6 @@ body {
   transition: border-color .15s;
 }
 .tb-select:focus { border-color: #1E40AF; }
-.upload-trigger {
-  display: flex; align-items: center; gap: 6px;
-  padding: 0 16px; height: 34px;
-  background: var(--c-primary); border: none; border-radius: var(--r-md);
-  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
-  color: #fff; cursor: pointer; transition: background .15s; white-space: nowrap;
-}
-.upload-trigger:hover { background: var(--c-primary-hover); }
-.upload-trigger svg { width: 14px; height: 14px; }
 .week-chip {
   font-size: 11px; padding: 3px 10px;
   background: var(--c-primary-light); border: 1px solid var(--c-primary-mid); border-radius: 20px;
@@ -189,33 +180,6 @@ body {
 /* ── CONTENT ── */
 #content { flex: 1; overflow-y: auto; padding: 28px; scroll-behavior: smooth; }
 
-/* ── UPLOAD SCREEN ── */
-#uploadScreen {
-  display: flex; align-items: center; justify-content: center;
-  min-height: calc(100vh - 60px);
-}
-.upload-card {
-  background: #fff; border: 2px dashed #CBD5E1; border-radius: var(--r-lg);
-  padding: 60px 48px; text-align: center; cursor: pointer;
-  transition: all .2s; max-width: 520px; width: 100%;
-}
-.upload-card:hover { border-color: #1E40AF; background: #EFF6FF; }
-.upload-icon-wrap {
-  width: 64px; height: 64px; border-radius: 16px;
-  background: #EFF6FF; display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px;
-}
-.upload-icon-wrap svg { width: 28px; height: 28px; color: #1E40AF; }
-.upload-title { font-size: 18px; font-weight: 600; color: #0F172A; margin-bottom: 8px; }
-.upload-desc { font-size: 13px; color: #64748B; line-height: 1.7; margin-bottom: 24px; }
-.demo-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 20px; background: #EFF6FF; border: 1px solid #BFDBFE;
-  border-radius: 8px; font-family: 'Inter', sans-serif;
-  font-size: 12px; font-weight: 500; color: #1E40AF; cursor: pointer;
-  transition: all .15s;
-}
-.demo-btn:hover { background: #DBEAFE; }
 .demo-btn svg { width: 14px; height: 14px; }
 
 /* ── BREADCRUMB ── */
@@ -410,6 +374,7 @@ tbody tr:hover td { background: #F8FAFC; }
 .pg-btn.active { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
 .pg-ellipsis { font-size: 12px; color: var(--c-text-3); padding: 0 4px; }
 
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes shimmer {
   0% { background-position: -600px 0; }
   100% { background-position: 600px 0; }
@@ -434,13 +399,6 @@ tbody tr:hover td { background: #F8FAFC; }
 @keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.3);opacity:.7} }
 .badge::before { animation: pulse-dot 2.5s ease-in-out infinite; }
 .badge.r::before { animation: pulse-dot 1.5s ease-in-out infinite; }
-.clear-btn {
-  font-family: 'Inter', sans-serif; font-size: 12px;
-  padding: 0 14px; height: 34px;
-  background: transparent; border: 1px solid #E2E8F0; border-radius: 8px;
-  color: #94A3B8; cursor: pointer; transition: all .15s; white-space: nowrap;
-}
-.clear-btn:hover { background: #FEF2F2; border-color: #FECACA; color: #DC2626; }
 .th-ref-btn {
   display: flex; align-items: center; gap: 6px;
   font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
@@ -753,7 +711,6 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
     </div>
     <select class="tb-select" id="wkSel" onchange="render()"><option value="">All Dates</option></select>
     <select class="tb-select" id="pmSel" onchange="render()"><option value="">All Parameters</option></select>
-    <button class="clear-btn" onclick="clearData()" id="clearBtn" style="display:none">Clear Data</button>
     <button class="th-ref-btn" onclick="printDashboard()" title="พิมพ์ / บันทึก PDF">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       Print / PDF
@@ -762,43 +719,17 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       ค่าควบคุม
     </button>
-    <button class="upload-trigger" onclick="document.getElementById('fileInput').click()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-      Upload CSV
-    </button>
-    <input type="file" id="fileInput" accept=".csv" multiple style="display:none" onchange="handleUpload(event)">
     <div id="weekChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     <div id="sbStatus" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--c-bg-surface);border:1px solid var(--c-border);color:var(--c-text-3)"></div>
     <span id="statusInd" style="display:none"></span>
   </div>
 
   <!-- UPLOAD SCREEN -->
-  <div id="storageBanner" class="storage-banner" style="margin:16px 20px 0;border-radius:var(--r-md)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
-    <span id="storageBannerText">พบข้อมูลที่บันทึกไว้ใน browser</span>
-    <div class="storage-banner-actions">
-      <button class="sb-action-btn sb-action-restore" id="sbLoadBtn" onclick="gsLoad()">โหลดจาก Google Sheet</button>
-        <button class="sb-action-btn sb-action-restore" onclick="restoreFromStorage()">โหลดจาก Browser</button>
-        <button class="sb-action-btn sb-action-clear" onclick="clearStorage()">ลบข้อมูล Local</button>
-      </div>
-  </div>
-  <div id="uploadScreen">
-    <div class="upload-card" onclick="document.getElementById('fileInput').click()" id="dropZone">
-      <div class="upload-icon-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-      </div>
-      <div class="upload-title">Upload your CSV file</div>
-      <div class="upload-desc">
-        Supports format: Day, Sample, Brix-NIR, Brix-Lab, Brix-Diff, Brix-%RPD, ...<br>
-        Upload multiple files to compare across weeks.
-      </div>
-      <button class="demo-btn" onclick="event.stopPropagation(); loadDemo()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Load demo data
-      </button>
+  <div id="uploadScreen" style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);">
+    <div style="text-align:center;padding:48px">
+      <div style="width:48px;height:48px;border:3px solid var(--c-border);border-top-color:var(--c-primary);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px"></div>
+      <div style="font-size:15px;font-weight:500;color:var(--c-text-1);margin-bottom:6px">กำลังโหลดข้อมูลจาก Google Sheet</div>
+      <div style="font-size:12px;color:var(--c-text-3)" id="loadingMsg">กรุณารอสักครู่...</div>
     </div>
   </div>
 
@@ -1090,54 +1021,6 @@ function parseCSV(rows) {
   return out;
 }
 
-function handleUpload(e) {
-  const files = Array.from(e.target.files || []);
-  if (!files.length) return;
-  // Reset input so same file can be re-selected next time
-  const fi = document.getElementById('fileInput');
-  setTimeout(() => { fi.value = ''; }, 200);
-  let done = 0, added = 0;
-  files.forEach(f => {
-    Papa.parse(f, { header: true, skipEmptyLines: true, complete(res) {
-      done++;
-      const parsed = parseCSV(res.data);
-      if (!parsed.length) {
-        toast('No data found in ' + f.name, 'err');
-      } else {
-        // Deduplicate by day+sample+param key
-        const existing = new Set(allRows.map(r => r.day + '|' + r.sample + '|' + r.param));
-        const fresh = parsed.filter(r => !existing.has(r.day + '|' + r.sample + '|' + r.param));
-        allRows = [...allRows, ...fresh];
-        added += fresh.length;
-      }
-      if (done === files.length) {
-        if (added > 0) {
-          refreshFilters();
-          buildSidebarSamples();
-          showDashboard();
-          showSkeleton();
-          setTimeout(() => render(), 120);
-          toast('Loaded ' + files.length + ' file(s) — ' + added + ' new rows', 'ok');
-          const cb = document.getElementById('clearBtn');
-          if (cb) cb.style.display = 'block';
-          saveToStorage();
-          if (gsConnected) gsSave(allRows);
-        } else {
-          toast('No new data — rows may already be loaded', 'err');
-        }
-      }
-    }});
-  });
-}
-
-document.addEventListener('dragover', e=>e.preventDefault());
-document.addEventListener('drop', e=>{
-  e.preventDefault();
-  if (e.dataTransfer&&e.dataTransfer.files.length) {
-    const fakeEv={target:{files:e.dataTransfer.files}};
-    handleUpload(fakeEv);
-  }
-});
 
 function buildSidebarSamples() {
   for (let g=1;g<=8;g++) {
@@ -1246,6 +1129,11 @@ function switchTab(i) {
 function showDashboard() {
   document.getElementById('uploadScreen').style.display='none';
   document.getElementById('dashboard').style.display='flex';
+}
+function showLoading(msg='กำลังโหลดข้อมูล...') {
+  document.getElementById('uploadScreen').style.display='flex';
+  document.getElementById('dashboard').style.display='none';
+  const el=document.getElementById('loadingMsg'); if(el) el.textContent=msg;
 }
 
 function render() {
@@ -1625,79 +1513,11 @@ function printDashboard() {
 }
 
 // ── LOCAL STORAGE ───────────────────────────────────────────────────
-const STORAGE_KEY = 'nir_dashboard_data';
-const STORAGE_META_KEY = 'nir_dashboard_meta';
-
-function saveToStorage() {
-  if (!allRows.length) return;
-  try {
-    const meta = {
-      savedAt: new Date().toISOString(),
-      rowCount: allRows.length,
-      days: [...new Set(allRows.map(d=>d.day))].sort()
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allRows));
-    localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));
-  } catch(e) {
-    console.warn('localStorage full:', e);
-  }
-}
-
-function restoreFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (!parsed.length) return;
-    allRows = parsed;
-    refreshFilters(); buildSidebarSamples(); showDashboard(); render();
-    hideBanner();
-    const cb = document.getElementById('clearBtn');
-    if (cb) cb.style.display = 'block';
-    toast('โหลดข้อมูล ' + allRows.length + ' rows จาก browser สำเร็จ', 'ok');
-  } catch(e) {
-    toast('โหลดข้อมูลไม่สำเร็จ', 'err');
-  }
-}
 
 function clearStorage() {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(STORAGE_META_KEY);
+  
   hideBanner();
   toast('ลบข้อมูลที่บันทึกไว้แล้ว', 'ok');
-}
-
-function hideBanner() {
-  const b = document.getElementById('storageBanner');
-  if (b) b.classList.remove('show');
-}
-
-function checkStorage() {
-  try {
-    const meta = localStorage.getItem(STORAGE_META_KEY);
-    if (!meta) return;
-    const m = JSON.parse(meta);
-    // Show banner on upload screen (always visible)
-    const banner = document.getElementById('storageBanner');
-    const txt    = document.getElementById('storageBannerText');
-    if (!banner || !txt) return;
-    const d = new Date(m.savedAt);
-    const dateStr = d.toLocaleDateString('th-TH', {day:'2-digit',month:'2-digit',year:'numeric'})
-      + ' ' + d.toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'});
-    txt.textContent = 'พบข้อมูลที่บันทึกไว้ — ' + m.rowCount + ' rows, '
-      + m.days.length + ' สัปดาห์ (บันทึก ' + dateStr + ')';
-    banner.classList.add('show');
-    // Show Google Sheet button only if configured
-      } catch(e) {
-    if (gsConnected) {
-      const banner = document.getElementById('storageBanner');
-      const txt = document.getElementById('storageBannerText');
-      if (banner && txt) {
-        txt.textContent = 'Google Sheet พร้อมใช้งาน — กดโหลดข้อมูลที่แชร์';
-        banner.classList.add('show');
-      }
-    }
-  }
 }
 
 function toggleSidebar() {
@@ -1763,10 +1583,8 @@ function goToStatus(s) {
 }
 
 function clearData() {
-  if (!confirm('Clear all uploaded data and start fresh?')) return;
+  if (!confirm('รีเซ็ต dashboard และโหลดข้อมูลใหม่จาก Google Sheet?')) return;
   allRows = []; activeGroup = 0; activeSample = ''; activeStatus = ''; currentTab = 0;
-  localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STORAGE_META_KEY);
-  if (gsConnected && confirm('ลบข้อมูลจาก Google Sheet (shared) ด้วยไหมครับ?')) gsClear();
   Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
   chartInsts = {};
   document.getElementById('wkSel').innerHTML = '<option value="">All Dates</option>';
@@ -1779,8 +1597,8 @@ function clearData() {
   document.getElementById('grp-0').classList.add('active');
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('uploadScreen').style.display = 'flex';
-  document.getElementById('clearBtn').style.display = 'none';
-  toast('Data cleared', 'ok');
+  // Reload from Google Sheet
+  setTimeout(() => gsLoad(), 300);
 }
 
 function loadDemo() {
@@ -1813,13 +1631,11 @@ function loadDemo() {
     refreshFilters(); buildSidebarSamples(); showDashboard(); render();
     toast('Demo data loaded — 3 weeks','ok');
     const cb=document.getElementById('clearBtn'); if(cb) cb.style.display='block';
-    saveToStorage();
     if (gsConnected) gsSave(allRows);
   }});
 }
   // Check for saved data on page load
   document.addEventListener('DOMContentLoaded', async () => {
-    checkStorage();
     // If Supabase configured, show status and try auto-load
     if (gsConnected) {
       const sbSt = document.getElementById('sbStatus');
@@ -1837,7 +1653,11 @@ function loadDemo() {
           hideBanner();
           if (sbSt) { sbSt.textContent='☁ Synced ('+allRows.length+' rows)'; sbSt.style.color='var(--c-good-text)'; }
         }
-      } catch(e) { console.warn('Auto-load failed:', e); }
+      } catch(e) {
+        console.warn('Auto-load failed:', e);
+        const msg = document.getElementById('loadingMsg');
+        if (msg) msg.textContent = 'เชื่อมต่อ Google Sheet ไม่สำเร็จ — กรุณาตรวจสอบ GS_URL';
+      }
     }
   });
 </script>
