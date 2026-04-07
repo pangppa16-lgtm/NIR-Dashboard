@@ -927,8 +927,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
 // 3. Deploy → New Deployment → Web App → Execute as: Me, Who has access: Anyone
 // 4. Copy Web App URL มาใส่ที่นี่
 const GS_URL = 'https://script.google.com/macros/s/AKfycbyvXZ6RRm2iH2ev1XMXTZb2EY_8N7SA0753_C8CMbMvUuKNRZ1EzIuFrIdrAYszvmdU/exec'; // ← ใส่ Web App URL ที่นี่
-let gsConnected = GS_URL !== 'https://script.google.com/macros/s/AKfycbyvXZ6RRm2iH2ev1XMXTZb2EY_8N7SA0753_C8CMbMvUuKNRZ1EzIuFrIdrAYszvmdU/exec';
-
+let gsConnected = true;
 async function gsSave(rows) {
   if (!gsConnected || !rows.length) return;
   const sbSt = document.getElementById('sbStatus');
