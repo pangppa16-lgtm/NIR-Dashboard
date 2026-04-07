@@ -1551,6 +1551,16 @@ function buildCharts(data, panel) {
 
     const paramData=data.filter(d=>d.param===p);
 
+    const ag=arr=>arr.length?+(arr.reduce((a,v)=>a+v,0)/arr.length).toFixed(2):null;
+    const nirD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.nir)):null;});
+    const labD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.lab)):null;});
+    const isSugarGroup = activeGroup === 7;
+    const y2Label = isSugarGroup ? '|Diff|' : '%RPD';
+    const y2Data = isSugarGroup
+      ? days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?+(ag(rs.map(d=>Math.abs(d.diff)))).toFixed(3):null;})
+      : days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?+(ag(rs.map(d=>Math.abs(d.rpd)))).toFixed(2):null;});
+    const rpdD = y2Data;
+
     // Build legend
     let legendHtml=`
       <span><span class="chart-legend-dot" style="background:#1E40AF;display:inline-block"></span>NIR</span>
@@ -1558,16 +1568,6 @@ function buildCharts(data, panel) {
       <span><span class="chart-legend-dot" style="background:#D97706;display:inline-block"></span>${y2Label}</span>`;
 
     ll.innerHTML=legendHtml;
-
-    const ag=arr=>arr.length?+(arr.reduce((a,v)=>a+v,0)/arr.length).toFixed(2):null;
-    const nirD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.nir)):null;});
-    const labD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.lab)):null;});
-    const isSugarGroup = activeGroup === 7;
-    const y2Data = isSugarGroup
-      ? days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?+(ag(rs.map(d=>Math.abs(d.diff)))).toFixed(3):null;})
-      : days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?+(ag(rs.map(d=>Math.abs(d.rpd)))).toFixed(2):null;});
-    const y2Label = isSugarGroup ? '|Diff|' : '%RPD';
-    const rpdD = y2Data;
 
     // Threshold line datasets (constant across all days)
     const datasets=[
