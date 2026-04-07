@@ -391,6 +391,24 @@ tbody tr:hover td { background: #F8FAFC; }
 #toast.err { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
 
 .divider { height: 1px; background: var(--c-border-light); margin: 4px 0; }
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-top: 1px solid var(--c-border);
+  background: var(--c-bg-card);
+}
+.pg-info { font-size: 12px; color: var(--c-text-3); }
+.pg-btns { display: flex; gap: 4px; align-items: center; }
+.pg-btn {
+  width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: 1px solid var(--c-border); background: transparent;
+  cursor: pointer; font-size: 12px; color: var(--c-text-2);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; font-family: var(--font-sans);
+}
+.pg-btn:hover:not(:disabled) { background: var(--c-primary-light); border-color: var(--c-primary-mid); color: var(--c-primary); }
+.pg-btn:disabled { opacity: .35; cursor: not-allowed; }
+.pg-btn.active { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+.pg-ellipsis { font-size: 12px; color: var(--c-text-3); padding: 0 4px; }
 
 @keyframes shimmer {
   0% { background-position: -600px 0; }
@@ -905,17 +923,17 @@ const GROUP_NAMES = {0:'All Groups',1:'Juice / Syrup',2:'Liquor',3:'Seed',4:'Mas
 const GRP_KEYS = {1:['juice','syrup'],2:['liquor'],3:['seed'],4:['massecuite','mass'],5:['molasses','mol'],6:['suction'],7:['sugar'],8:['bagasse','filter','waste']};
 
 const BRIX_POL_TH = [
-  {r:[0,5],    diff:0.50, rpd:{g:5,   f:10}},
-  {r:[6,9],    diff:1.00, rpd:{g:5,   f:10}},
-  {r:[10,15],  diff:1.20, rpd:{g:5,   f:10}},
-  {r:[16,20],  diff:1.30, rpd:{g:5,   f:10}},
-  {r:[21,35],  diff:1.30, rpd:{g:3,   f:5}},
-  {r:[36,50],  diff:1.50, rpd:{g:3,   f:5}},
-  {r:[51,60],  diff:1.80, rpd:{g:2,   f:4}},
-  {r:[61,75],  diff:1.70, rpd:{g:1.5, f:3}},
-  {r:[76,80],  diff:2.00, rpd:{g:1.5, f:3}},
-  {r:[81,90],  diff:2.00, rpd:{g:1.25,f:2.5}},
-  {r:[91,9999],diff:1.70, rpd:{g:1,   f:2}}
+  {r:[0,5.99],   diff:0.50, rpd:{g:5,   f:10}},
+  {r:[6,9.99],   diff:1.00, rpd:{g:5,   f:10}},
+  {r:[10,15.99], diff:1.20, rpd:{g:5,   f:10}},
+  {r:[16,20.99], diff:1.30, rpd:{g:5,   f:10}},
+  {r:[21,35.99], diff:1.30, rpd:{g:3,   f:5}},
+  {r:[36,50.99], diff:1.50, rpd:{g:3,   f:5}},
+  {r:[51,60.99], diff:1.80, rpd:{g:2,   f:4}},
+  {r:[61,75.99], diff:1.70, rpd:{g:1.5, f:3}},
+  {r:[76,80.99], diff:2.00, rpd:{g:1.5, f:3}},
+  {r:[81,90.99], diff:2.00, rpd:{g:1.25,f:2.5}},
+  {r:[91,9999],  diff:1.70, rpd:{g:1,   f:2}}
 ];
 const COLOR_TH = [
   {r:[0,50],d:3},{r:[51,70],d:5},{r:[71,100],d:7},{r:[101,300],d:70},
@@ -968,6 +986,7 @@ function statusLabel(s) { return {g:'Good',y:'Fair',r:'Alert'}[s]||'?'; }
 function badgeHtml(s) { return `<span class="badge ${s}">${statusLabel(s)}</span>`; }
 
 let allRows=[], activeGroup=0, activeSample='', currentTab=0, chartInsts={}, activeStatus='';
+let tablePage=1; const PAGE_SIZE=50;
 
 function getGroup(s) {
   const sl=(s||'').toLowerCase();
@@ -1092,7 +1111,7 @@ function getFilteredNoStatus() {
 }
 
 function selGroup(g, btn) {
-  activeGroup=g; activeSample=''; activeStatus='';
+  activeGroup=g; activeSample=''; activeStatus=''; tablePage=1;
   document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active','open'));
   document.querySelectorAll('.sample-list').forEach(el=>el.classList.remove('open'));
   btn.classList.add('active');
@@ -1115,7 +1134,7 @@ function toggleGroup(g, btn) {
 }
 
 function selSample(s, btn) {
-  activeStatus = '';
+  activeStatus = ''; tablePage=1;
   // If clicking the already-active sample → deselect (toggle off)
   if (activeSample === s) {
     activeSample = '';
@@ -1136,7 +1155,7 @@ function hlSamples() {
 }
 
 function switchTab(i) {
-  currentTab=i;
+  tablePage=1; currentTab=i;
   // Clear status filter when leaving Data Table tab
   if (i !== 2 && activeStatus) {
     activeStatus = '';
@@ -1357,10 +1376,15 @@ function buildHeatmap(data, panel) {
 
 function buildTable(data, panel) {
   if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
+  const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+  if (tablePage > totalPages) tablePage = 1;
+  const pageData = data.slice((tablePage-1)*PAGE_SIZE, tablePage*PAGE_SIZE);
+  const statusLabel = activeStatus ? ' &nbsp;(filtered: <b>'+{g:'Good',y:'Fair',r:'Alert'}[activeStatus]+'</b>)' : '';
+
   let html=`<div class="table-container">
     <div class="table-header">
       <span class="table-title">Raw Data</span>
-      <span class="table-count">${data.length} rows${activeStatus ? ' &nbsp;(filtered: <b>'+{g:'Good',y:'Fair',r:'Alert'}[activeStatus]+'</b>)' : ''}</span>
+      <span class="table-count">${data.length} rows${statusLabel}</span>
     </div>
     <div class="table-wrap"><table>
     <thead><tr>
@@ -1369,31 +1393,67 @@ function buildTable(data, panel) {
       <th>Threshold</th><th>Status</th>
     </tr></thead><tbody>`;
 
-  for (const d of data) {
+  for (const d of pageData) {
     const st=getStatus(d.param,d.nir,d.lab,d.diff,d.rpd);
     const th=thLabel(d.param,d.nir,d.lab);
     html+=`<tr>
       <td class="td-mono">${esc(d.day)}</td>
-      <td style="color:#64748B">${esc(GROUP_NAMES[d.group]||'—')}</td>
+      <td style="color:var(--c-text-3)">${esc(GROUP_NAMES[d.group]||'—')}</td>
       <td style="font-weight:500">${esc(d.sample)}</td>
-      <td><span style="background:#F1F5F9;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">${esc(d.param)}</span></td>
-      <td class="td-mono" style="color:#1E40AF">${fmt(d.nir)}</td>
+      <td><span style="background:var(--c-bg-surface);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">${esc(d.param)}</span></td>
+      <td class="td-mono" style="color:var(--c-primary)">${fmt(d.nir)}</td>
       <td class="td-mono">${fmt(d.lab)}</td>
       <td class="td-mono cell-${st}">${fmt(Math.abs(d.diff),3)}</td>
       <td class="td-mono cell-${st}">${fmt(Math.abs(d.rpd),2)}%</td>
-      <td style="font-size:11px;color:#94A3B8">${th}</td>
+      <td style="font-size:11px;color:var(--c-text-4)">${th}</td>
       <td>${badgeHtml(st)}</td>
     </tr>`;
   }
-  html+='</tbody></table></div></div>';
+  html+='</tbody></table></div>';
+
+  // Pagination controls
+  if (totalPages > 1) {
+    const start=(tablePage-1)*PAGE_SIZE+1, end=Math.min(tablePage*PAGE_SIZE,data.length);
+    html+=`<div class="pagination">
+      <span class="pg-info">แสดง ${start}–${end} จาก ${data.length} rows</span>
+      <div class="pg-btns">`;
+    // Prev
+    html+=`<button class="pg-btn" ${tablePage===1?'disabled':''} onclick="gotoPage(${tablePage-1},this)">&#8592;</button>`;
+    // Page numbers
+    const pages=[];
+    if(totalPages<=7){for(let i=1;i<=totalPages;i++)pages.push(i);}
+    else{
+      pages.push(1);
+      if(tablePage>3)pages.push('…');
+      for(let i=Math.max(2,tablePage-1);i<=Math.min(totalPages-1,tablePage+1);i++)pages.push(i);
+      if(tablePage<totalPages-2)pages.push('…');
+      pages.push(totalPages);
+    }
+    pages.forEach(p=>{
+      if(p==='…') html+=`<span class="pg-ellipsis">…</span>`;
+      else html+=`<button class="pg-btn${p===tablePage?' active':''}" onclick="gotoPage(${p},this)">${p}</button>`;
+    });
+    // Next
+    html+=`<button class="pg-btn" ${tablePage===totalPages?'disabled':''} onclick="gotoPage(${tablePage+1},this)">&#8594;</button>`;
+    html+='</div></div>';
+  }
+  html+='</div>';
   panel.innerHTML=html;
+}
+
+function gotoPage(p, btn) {
+  tablePage = p;
+  // Re-render table panel only
+  const panel = document.getElementById('panel2');
+  if (panel) buildTable(getFiltered(), panel);
 }
 
 function buildCharts(data, panel) {
   Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
   chartInsts={};
   if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
-  const days=[...new Set(data.map(d=>d.day))].sort();
+  const parseDate=s=>{const[d,m,y]=(s||'').split('/');return new Date(+y,+m-1,+d);};
+  const days=[...new Set(data.map(d=>d.day))].sort((a,b)=>parseDate(a)-parseDate(b));
   const params=[...new Set(data.map(d=>d.param))];
 
   let html='<div class="chart-grid">';
@@ -1401,7 +1461,7 @@ function buildCharts(data, panel) {
     <div class="chart-card">
       <div class="chart-card-title" id="ct${i}"></div>
       <div class="chart-legend" id="cl${i}"></div>
-      <div style="position:relative;height:200px"><canvas id="cc${i}"></canvas></div>
+      <div style="position:relative;height:220px"><canvas id="cc${i}"></canvas></div>
     </div>`);
   html+='</div>';
   panel.innerHTML=html;
@@ -1412,22 +1472,33 @@ function buildCharts(data, panel) {
     const ll=document.getElementById('cl'+i);
     if (!el||!tl||!ll) return;
     tl.textContent=`${p} — NIR vs Lab`;
-    ll.innerHTML=`
+
+    const paramData=data.filter(d=>d.param===p);
+
+    // Build legend
+    let legendHtml=`
       <span><span class="chart-legend-dot" style="background:#1E40AF;display:inline-block"></span>NIR</span>
-      <span><span class="chart-legend-dot" style="background:#16A34A;display:inline-block;border-top:2px dashed #16A34A;background:transparent"></span>Lab</span>
+      <span><span class="chart-legend-dot" style="background:#16A34A;display:inline-block"></span>Lab</span>
       <span><span class="chart-legend-dot" style="background:#D97706;display:inline-block"></span>%RPD</span>`;
+
+    ll.innerHTML=legendHtml;
+
     const ag=arr=>arr.length?+(arr.reduce((a,v)=>a+v,0)/arr.length).toFixed(2):null;
     const nirD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.nir)):null;});
     const labD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?ag(rs.map(d=>d.lab)):null;});
     const rpdD=days.map(w=>{const rs=data.filter(d=>d.day===w&&d.param===p);return rs.length?+(ag(rs.map(d=>Math.abs(d.rpd)))).toFixed(2):null;});
 
+    // Threshold line datasets (constant across all days)
+    const datasets=[
+      {label:'NIR',data:nirD,borderColor:'#1E40AF',backgroundColor:'rgba(30,64,175,.06)',tension:.35,pointRadius:4,pointBackgroundColor:'#1E40AF',borderWidth:2,yAxisID:'y'},
+      {label:'Lab',data:labD,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.04)',tension:.35,pointRadius:4,borderDash:[5,4],pointBackgroundColor:'#16A34A',borderWidth:2,yAxisID:'y'},
+      {label:'%RPD',data:rpdD,borderColor:'#D97706',backgroundColor:'rgba(217,119,6,.05)',tension:.35,pointRadius:3,pointBackgroundColor:'#D97706',borderWidth:1.5,yAxisID:'y2'}
+    ];
+
+
     chartInsts['c'+i]=new Chart(el,{
       type:'line',
-      data:{labels:days,datasets:[
-        {label:'NIR',data:nirD,borderColor:'#1E40AF',backgroundColor:'rgba(30,64,175,.06)',tension:.35,pointRadius:4,pointBackgroundColor:'#1E40AF',borderWidth:2,yAxisID:'y'},
-        {label:'Lab',data:labD,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.04)',tension:.35,pointRadius:4,borderDash:[5,4],pointBackgroundColor:'#16A34A',borderWidth:2,yAxisID:'y'},
-        {label:'%RPD',data:rpdD,borderColor:'#D97706',backgroundColor:'rgba(217,119,6,.05)',tension:.35,pointRadius:3,pointBackgroundColor:'#D97706',borderWidth:1.5,yAxisID:'y2'}
-      ]},
+      data:{labels:days,datasets},
       options:{
         responsive:true,maintainAspectRatio:false,spanGaps:true,
         interaction:{mode:'index',intersect:false},
