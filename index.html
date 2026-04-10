@@ -157,25 +157,20 @@ body {
 /* ── TOPBAR ── */
 #topbar {
   background: var(--c-bg-card); border-bottom: 1px solid #E2E8F0;
-  padding: 0 28px; height: 60px;
-  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+  padding: 0 20px; height: 56px;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
   border-top: 3px solid var(--c-primary);
 }
-.topbar-title { font-size: 16px; font-weight: 600; color: #0F172A; flex: 1; }
+.topbar-title { font-size: 16px; font-weight: 600; color: #0F172A; flex: 0 0 auto; white-space: nowrap; }
 .topbar-subtitle { font-size: 12px; font-weight: 400; color: #94A3B8; margin-left: 8px; }
 .tb-select {
-  font-family: 'Inter', sans-serif; font-size: 12px;
-  padding: 6px 12px; height: 34px;
+  font-family: 'Inter', sans-serif; font-size: 11px;
+  padding: 4px 8px; height: 30px;
   background: var(--c-bg-surface); border: 1px solid var(--c-border); border-radius: 8px;
   color: #374151; cursor: pointer; outline: none;
-  transition: border-color .15s;
+  transition: border-color .15s; max-width: 130px;
 }
 .tb-select:focus { border-color: #1E40AF; }
-.week-chip {
-  font-size: 11px; padding: 3px 10px;
-  background: var(--c-primary-light); border: 1px solid var(--c-primary-mid); border-radius: 20px;
-  color: var(--c-primary-text); font-weight: 500; white-space: nowrap;
-}
 
 /* ── CONTENT ── */
 #content { flex: 1; overflow-y: auto; padding: 28px; scroll-behavior: smooth; }
@@ -240,7 +235,8 @@ body {
   background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px 20px;
   transition: box-shadow .15s;
 }
-.param-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.param-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); transform: translateY(-1px); }
+.param-card:active { transform: scale(0.99); }
 .pc-header {
   display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
 }
@@ -446,9 +442,9 @@ tbody tr:hover td { background: #F8FAFC; }
 .badge::before { animation: pulse-dot 2.5s ease-in-out infinite; }
 .badge.r::before { animation: pulse-dot 1.5s ease-in-out infinite; }
 .th-ref-btn {
-  display: flex; align-items: center; gap: 6px;
-  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
-  padding: 0 14px; height: 34px;
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+  padding: 0 10px; height: 30px;
   background: var(--c-bg-surface); border: 1px solid var(--c-border);
   border-radius: var(--r-md); color: var(--c-text-2);
   cursor: pointer; transition: all .15s; white-space: nowrap;
@@ -468,7 +464,7 @@ tbody tr:hover td { background: #F8FAFC; }
 }
 .menu-toggle {
   display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border: 1px solid var(--c-border);
+  width: 30px; height: 30px; border: 1px solid var(--c-border);
   border-radius: var(--r-md); background: transparent; cursor: pointer;
   flex-shrink: 0; transition: all .15s;
 }
@@ -751,11 +747,15 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
     <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" title="เปิด/ปิด Sidebar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="topbar-title">
-      NIR Lab Analytics
-      <span class="topbar-subtitle" id="topCtx">— All Groups</span>
-    </div>
+    <div class="topbar-title">NIR Lab Analytics</div>
+    <span class="topbar-subtitle" id="topCtx" style="white-space:nowrap;flex-shrink:0">— All Groups</span>
     <select class="tb-select" id="wkSel" onchange="render()"><option value="">All Dates</option></select>
+    <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--c-text-3)">
+      <span>ตั้งแต่</span>
+      <select class="tb-select" id="dateFrom" style="min-width:90px" onchange="dateFrom=this.value;tablePage=1;render()"><option value="">--</option></select>
+      <span>ถึง</span>
+      <select class="tb-select" id="dateTo" style="min-width:90px" onchange="dateTo=this.value;tablePage=1;render()"><option value="">--</option></select>
+    </div>
     <select class="tb-select" id="pmSel" onchange="render()"><option value="">All Parameters</option></select>
     <button class="th-ref-btn" onclick="printDashboard()" title="พิมพ์ / บันทึก PDF">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -765,7 +765,6 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--c-primary)
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       ค่าควบคุม
     </button>
-    <div id="weekChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     <div id="sbStatus" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--c-bg-surface);border:1px solid var(--c-border);color:var(--c-text-3)"></div>
     <span id="statusInd" style="display:none"></span>
   </div>
@@ -1039,6 +1038,7 @@ function badgeHtml(s) { return `<span class="badge ${s}">${statusLabel(s)}</span
 
 let allRows=[], activeGroup=0, activeSample='', currentTab=0, chartInsts={}, activeStatus='';
 let tablePage=1; const PAGE_SIZE=50;
+let dateFrom='', dateTo='';
 let hmView='both'; // 'both' | 'diff' | 'rpd'
 let hmMode='table'; // 'table' | 'summary'
 
@@ -1073,11 +1073,13 @@ function parseCSV(rows) {
 function buildSidebarSamples() {
   for (let g=1;g<=8;g++) {
     const sl=document.getElementById('sl-'+g); if (!sl) continue;
-    const samples=[...new Set(allRows.filter(d=>d.group===g).map(d=>d.sample))].sort();
+    const gRows=allRows.filter(d=>d.group===g);
+    const samples=[...new Set(gRows.map(d=>d.sample))].sort();
     sl.innerHTML=samples.map(s=>{
-      const esc = s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return `<button class="sample-btn" data-sample='${esc}' onclick="selSample('${esc}',this)">${s}</button>`;
+      const e=s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<button class="sample-btn" data-sample='${e}' onclick="selSample('${e}',this)">${s}</button>`;
     }).join('');
+
   }
 }
 
@@ -1090,9 +1092,24 @@ function refreshFilters() {
   wk.innerHTML='<option value="">All Dates</option>'+days.map((w,i)=>`<option value="${w}">Week ${i+1} — ${w}</option>`).join('');
   const pm=document.getElementById('pmSel');
   pm.innerHTML='<option value="">All Parameters</option>'+PARAMS.map(p=>`<option value="${p}">${p}</option>`).join('');
-  document.getElementById('weekChips').innerHTML=days.map((w,i)=>`<span class="week-chip">W${i+1}</span>`).join('');
+  // Populate date range selects
+  const fromSel=document.getElementById('dateFrom');
+  const toSel  =document.getElementById('dateTo');
+  if (fromSel && toSel) {
+    const opts='<option value="">--</option>'+days.map((w,i)=>`<option value="${w}">W${i+1} — ${w}</option>`).join('');
+    fromSel.innerHTML=opts; fromSel.value=dateFrom||'';
+    toSel.innerHTML  =opts; toSel.value  =dateTo||'';
+  }
 }
 
+function inDateRange(day) {
+  if (!dateFrom && !dateTo) return true;
+  const pd=s=>{const[d,m,y]=s.split('/');return new Date(+y,+m-1,+d);};
+  const t=pd(day);
+  if (dateFrom && t < pd(dateFrom)) return false;
+  if (dateTo   && t > pd(dateTo))   return false;
+  return true;
+}
 function getFiltered() {
   const wf=document.getElementById('wkSel').value;
   const pf=document.getElementById('pmSel').value;
@@ -1100,6 +1117,7 @@ function getFiltered() {
     if (activeGroup!==0&&d.group!==activeGroup) return false;
     if (activeSample&&d.sample!==activeSample) return false;
     if (wf&&d.day!==wf) return false;
+    if (!inDateRange(d.day)) return false;
     if (pf&&d.param!==pf) return false;
     if (activeStatus&&d.status!==activeStatus) return false;
     return true;
@@ -1112,6 +1130,7 @@ function getFilteredNoStatus() {
     if (activeGroup!==0&&d.group!==activeGroup) return false;
     if (activeSample&&d.sample!==activeSample) return false;
     if (wf&&d.day!==wf) return false;
+    if (!inDateRange(d.day)) return false;
     if (pf&&d.param!==pf) return false;
     return true;
   });
@@ -1166,8 +1185,10 @@ function switchTab(i) {
   // Update tab UI first
   document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
   document.querySelectorAll('.tab-panel').forEach((p,j)=>p.style.display=j===i?'block':'none');
-  // Clear status filter when leaving Data Table tab
-  if (i !== 2 && activeStatus) {
+  // When leaving Data Table — reset param filter + status filter
+  if (i !== 2) {
+    const pmSel = document.getElementById('pmSel');
+    if (pmSel) pmSel.value = '';
     activeStatus = '';
     const ind = document.getElementById('statusInd');
     if (ind) ind.style.display = 'none';
@@ -1288,17 +1309,24 @@ function buildSummary(data, panel) {
     const st=getStatus(p,avgNIR,avgLab,avgDiff,avgRPD);
     const dom=rows.some(d=>d.status==='r')?'r':rows.some(d=>d.status==='y')?'y':'g';
     const th=thLabel(p,avgNIR,avgLab);
-    html+=`<div class="param-card">
+    html+=`<div class="param-card" style="cursor:pointer" onclick="goToParam('${p}')" title="คลิกเพื่อดูข้อมูล ${p} ใน Data Table">
       <div class="pc-header">
-        <div class="pc-name">${p}</div>
+        <div class="pc-name" style="text-decoration:underline dotted;text-underline-offset:3px">${p}</div>
         ${badgeHtml(dom)}
         <span class="pc-threshold">${th}</span>
       </div>
-      <div class="pc-stats">
-        <div class="ps-item"><div class="ps-lbl">NIR</div><div class="ps-val" style="color:#1E40AF">${fmt(avgNIR)}</div></div>
-        <div class="ps-item"><div class="ps-lbl">Lab</div><div class="ps-val">${fmt(avgLab)}</div></div>
-        <div class="ps-item ${st}"><div class="ps-lbl">Diff</div><div class="ps-val">${fmt(avgDiff,3)}</div></div>
-        <div class="ps-item ${st}"><div class="ps-lbl">%RPD</div><div class="ps-val">${fmt(avgRPD,2)}%</div></div>
+      <div class="pc-stats" style="grid-template-columns:repeat(4,1fr)">
+        <div class="ps-item"><div class="ps-lbl">NIR avg</div><div class="ps-val" style="color:var(--c-primary)">${fmt(avgNIR)}</div></div>
+        <div class="ps-item"><div class="ps-lbl">Lab avg</div><div class="ps-val">${fmt(avgLab)}</div></div>
+        <div class="ps-item ${st}"><div class="ps-lbl">|Diff| avg</div><div class="ps-val">${fmt(avgDiff,3)}</div></div>
+        <div class="ps-item ${st}"><div class="ps-lbl">%RPD avg</div><div class="ps-val">${fmt(avgRPD,2)}%</div></div>
+      </div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--c-border-light);display:flex;align-items:center;gap:6px;font-size:11px;color:var(--c-text-3)">
+        <span>NIR vs Lab bias:</span>
+        <span style="font-weight:600;color:${Math.abs(avgNIR-avgLab)<0.01?'var(--c-good-text)':Math.abs(avgNIR-avgLab)<avgDiff*2?'var(--c-fair-text)':'var(--c-alert-text)'}">
+          ${avgNIR>avgLab?'+':''}${fmt(avgNIR-avgLab,3)}
+        </span>
+        <span style="opacity:.6">(NIR ${avgNIR>avgLab?'สูงกว่า':'ต่ำกว่า'} Lab)</span>
       </div>
     </div>`;
   }
@@ -1591,6 +1619,10 @@ function buildTable(data, panel) {
   if (tablePage > totalPages) tablePage = 1;
   const pageData = data.slice((tablePage-1)*PAGE_SIZE, tablePage*PAGE_SIZE);
   const statusLabel = activeStatus ? ' &nbsp;(filtered: <b>'+{g:'Good',y:'Fair',r:'Alert'}[activeStatus]+'</b>)' : '';
+  // Build week label map
+  const parseDate=s=>{const[d,m,y]=(s||'').split('/');return new Date(+y,+m-1,+d);};
+  const allDays=[...new Set(allRows.map(d=>d.day))].sort((a,b)=>parseDate(a)-parseDate(b));
+  const dayLabel={}; allDays.forEach((d,i)=>dayLabel[d]='W'+(i+1));
 
   let html=`<div class="table-container">
     <div class="table-header">
@@ -1608,7 +1640,7 @@ function buildTable(data, panel) {
     const st=getStatus(d.param,d.nir,d.lab,d.diff,d.rpd);
     const th=thLabel(d.param,d.nir,d.lab);
     html+=`<tr>
-      <td class="td-mono">${esc(d.day)}</td>
+      <td class="td-mono"><span style="font-size:10px;font-weight:600;color:var(--c-primary);margin-right:4px">${dayLabel[d.day]||''}</span>${esc(d.day)}</td>
       <td style="color:var(--c-text-3)">${esc(GROUP_NAMES[d.group]||'—')}</td>
       <td style="font-weight:500">${esc(d.sample)}</td>
       <td><span style="background:var(--c-bg-surface);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500">${esc(d.param)}</span></td>
@@ -1808,6 +1840,17 @@ function showSkeleton() {
   c.appendChild(grid2);
 }
 
+function goToParam(p) {
+  // Set pmSel to this param, switch to Data Table tab
+  const pmSel = document.getElementById('pmSel');
+  if (pmSel) { pmSel.value = p; }
+  activeStatus = ''; tablePage = 1;
+  currentTab = 2;
+  document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===2));
+  document.querySelectorAll('.tab-panel').forEach((p2,j)=>p2.style.display=j===2?'block':'none');
+  render();
+}
+
 function goToStatus(s) {
   activeStatus = s;
   currentTab = 2;
@@ -1831,12 +1874,11 @@ function goToStatus(s) {
 
 function clearData() {
   if (!confirm('รีเซ็ต dashboard และโหลดข้อมูลใหม่จาก Google Sheet?')) return;
-  allRows = []; activeGroup = 0; activeSample = ''; activeStatus = ''; currentTab = 0;
+  allRows = []; activeGroup = 0; activeSample = ''; activeStatus = ''; dateFrom=''; dateTo=''; hmMode='table'; currentTab = 0;
   Object.values(chartInsts).forEach(c=>{try{c.destroy();}catch(e){}});
   chartInsts = {};
   document.getElementById('wkSel').innerHTML = '<option value="">All Dates</option>';
   document.getElementById('pmSel').innerHTML = '<option value="">All Parameters</option>';
-  document.getElementById('weekChips').innerHTML = '';
   document.getElementById('topCtx').textContent = '— All Groups';
   document.querySelectorAll('.sample-list').forEach(el=>el.innerHTML='');
   document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active','open'));
