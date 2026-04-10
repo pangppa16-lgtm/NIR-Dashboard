@@ -306,17 +306,63 @@ tbody tr:hover td { background: #F8FAFC; }
 
 /* ── HEATMAP ── */
 .heatmap-wrap { overflow-x: auto; }
-.hm-th { text-align: center !important; font-size: 10px !important; }
+.hm-th {
+  text-align: center !important; font-size: 11px !important;
+  padding: 8px 10px !important; white-space: nowrap;
+  background: var(--c-bg-surface);
+}
+.hm-th-param {
+  font-size: 12px !important; font-weight: 600 !important;
+  color: var(--c-text-1) !important; padding: 10px 12px !important;
+  background: var(--c-bg-surface); border-bottom: 2px solid var(--c-primary);
+}
+.hm-th-week { font-size: 11px !important; font-weight: 600 !important; color: var(--c-text-2) !important; }
+.hm-th-sub  { font-size: 10px !important; color: var(--c-text-3) !important; }
 .hm-td {
   text-align: center !important;
   font-family: 'SF Mono','Fira Code',monospace;
   font-size: 11px; font-weight: 600;
-  padding: 8px 6px !important;
+  padding: 7px 10px !important; white-space: nowrap;
 }
-.hm-g { background: var(--c-good-bg) !important; color: var(--c-good-text) !important; border-left: 2px solid var(--c-good); }
-.hm-y { background: var(--c-fair-bg) !important; color: var(--c-fair-text) !important; border-left: 2px solid var(--c-fair); }
-.hm-r { background: var(--c-alert-bg) !important; color: var(--c-alert-text) !important; border-left: 2px solid var(--c-alert); }
-.hm-empty { color: #CBD5E1 !important; }
+.hm-sample-col {
+  font-weight: 500; color: var(--c-text-1); font-size: 12px;
+  white-space: nowrap; padding: 8px 14px !important;
+  position: sticky; left: 0; z-index: 2;
+  background: var(--c-bg-card);
+  border-right: 1px solid var(--c-border);
+  min-width: 120px;
+}
+.hm-sample-head {
+  position: sticky; left: 0; z-index: 3;
+  background: var(--c-bg-surface);
+  border-right: 1px solid var(--c-border);
+}
+.hm-g { background: var(--c-good-bg) !important; color: var(--c-good-text) !important; }
+.hm-y { background: var(--c-fair-bg) !important; color: var(--c-fair-text) !important; }
+.hm-r { background: var(--c-alert-bg) !important; color: var(--c-alert-text) !important; }
+.hm-empty { color: var(--c-text-4) !important; background: var(--c-bg-surface) !important; }
+.hm-legend {
+  display: flex; gap: 16px; align-items: center;
+  padding: 10px 16px; border-bottom: 1px solid var(--c-border);
+  font-size: 11px; flex-wrap: wrap;
+}
+.hm-legend-item { display: flex; align-items: center; gap: 5px; }
+.hm-legend-dot {
+  width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+}
+.hm-view-toggle {
+  display: flex; gap: 4px; margin-left: auto;
+}
+.hm-toggle-btn {
+  font-size: 11px; font-weight: 500; padding: 3px 10px;
+  border-radius: 20px; border: 1px solid var(--c-border);
+  background: transparent; color: var(--c-text-3);
+  cursor: pointer; transition: all .15s;
+}
+.hm-toggle-btn.active {
+  background: var(--c-primary); border-color: var(--c-primary); color: #fff;
+}
+.hm-param-sep { border-left: 2px solid var(--c-primary-mid) !important; }
 
 /* ── CHARTS ── */
 .chart-grid {
@@ -993,6 +1039,8 @@ function badgeHtml(s) { return `<span class="badge ${s}">${statusLabel(s)}</span
 
 let allRows=[], activeGroup=0, activeSample='', currentTab=0, chartInsts={}, activeStatus='';
 let tablePage=1; const PAGE_SIZE=50;
+let hmView='both'; // 'both' | 'diff' | 'rpd'
+let hmMode='table'; // 'table' | 'summary'
 
 function getGroup(s) {
   const sl=(s||'').toLowerCase();
@@ -1012,9 +1060,9 @@ function parseCSV(rows) {
       if (nir===null&&lab===null) return;
       const dv = fv([p+'-Diff','%'+p+'-Diff','Moisture-Diff']);
       const rv = fv([p+'-%RPD',p+'_RPD']);
-      const d = dv!==null ? dv : (nir!==null&&lab!==null ? nir-lab : 0);
+      const d = dv!==null ? Math.abs(dv) : (nir!==null&&lab!==null ? Math.abs(nir-lab) : 0);
       const avg2=(Math.abs(nir||0)+Math.abs(lab||0))/2;
-      const rr = rv!==null ? rv : (avg2===0?0:((nir||0)-(lab||0))/avg2*100);
+      const rr = rv!==null ? Math.abs(rv) : (avg2===0?0:Math.abs((nir||0)-(lab||0))/avg2*100);
       out.push({day,sample,group:getGroup(sample),param:p,nir:nir||0,lab:lab||0,diff:+d.toFixed(4),rpd:+rr.toFixed(2),status:getStatus(p,nir||0,lab||0,d,rr)});
     });
   });
@@ -1115,6 +1163,9 @@ function hlSamples() {
 
 function switchTab(i) {
   tablePage=1; currentTab=i;
+  // Update tab UI first
+  document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.style.display=j===i?'block':'none');
   // Clear status filter when leaving Data Table tab
   if (i !== 2 && activeStatus) {
     activeStatus = '';
@@ -1122,8 +1173,8 @@ function switchTab(i) {
     if (ind) ind.style.display = 'none';
     render(); return;
   }
-  document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
-  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.style.display=j===i?'block':'none');
+  // Reset hmMode when leaving Heatmap tab
+  if (i !== 1) hmMode = 'table';
 }
 
 function showDashboard() {
@@ -1255,88 +1306,284 @@ function buildSummary(data, panel) {
   panel.innerHTML=html;
 }
 
+function setHmView(v) { hmView=v; render(); }
+function setHmMode(m) { hmMode=m; render(); }
+
+function renderHmCell(p, rows) {
+  if (!rows.length) return `<td class="hm-td hm-empty">—</td>${hmView==='both'?'<td class="hm-td hm-empty">—</td>':''}`;
+  const avgD = avg(rows.map(d=>Math.abs(d.diff)));
+  const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
+  const avgN = avg(rows.map(d=>d.nir)), avgL = avg(rows.map(d=>d.lab));
+  const st = getStatus(p,avgN,avgL,avgD,avgR);
+  if (hmView==='diff') return `<td class="hm-td hm-${st}">${fmt(avgD,2)}</td>`;
+  if (hmView==='rpd')  return `<td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
+  return `<td class="hm-td hm-${st}">${fmt(avgD,2)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
+}
+
 function buildHeatmap(data, panel) {
   if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
+
+  // Legend + toggle — always rendered regardless of mode
+  const legendHtml = `
+    <div class="hm-legend">
+      <div class="hm-legend-item"><div class="hm-legend-dot" style="background:var(--c-good-bg);border:1px solid var(--c-good-border)"></div><span style="color:var(--c-good-text);font-weight:500">Good</span></div>
+      <div class="hm-legend-item"><div class="hm-legend-dot" style="background:var(--c-fair-bg);border:1px solid var(--c-fair-border)"></div><span style="color:var(--c-fair-text);font-weight:500">Fair</span></div>
+      <div class="hm-legend-item"><div class="hm-legend-dot" style="background:var(--c-alert-bg);border:1px solid var(--c-alert-border)"></div><span style="color:var(--c-alert-text);font-weight:500">Alert</span></div>
+      <div class="hm-view-toggle">
+        <button class="hm-toggle-btn${hmMode==='table'&&hmView==='both'?' active':''}" onclick="hmMode='table';setHmView('both')">Diff + %RPD</button>
+        <button class="hm-toggle-btn${hmMode==='table'&&hmView==='diff'?' active':''}" onclick="hmMode='table';setHmView('diff')">Diff</button>
+        <button class="hm-toggle-btn${hmMode==='table'&&hmView==='rpd'?' active':''}" onclick="hmMode='table';setHmView('rpd')">%RPD</button>
+        <button class="hm-toggle-btn${hmMode==='summary'?' active':''}" style="border-color:var(--c-primary-mid)" onclick="setHmMode('summary')">▦ Summary</button>
+      </div>
+    </div>`;
+
+  // Route to Summary mode — wrap with legend on top
+  if (hmMode==='summary') {
+    buildSummaryCards(data, panel);
+    // Prepend legend to summary output
+    panel.innerHTML = '<div class="table-container">' + legendHtml + '</div>' + panel.innerHTML;
+    return;
+  }
 
   const wf = document.getElementById('wkSel').value;
   const parseDate = s => { const [d,m,y]=(s||'').split('/'); return new Date(+y,+m-1,+d); };
   const days = [...new Set(data.map(d=>d.day))].sort((a,b)=>parseDate(a)-parseDate(b));
   const multiWeek = !wf && days.length > 1;
-
   const samples = [...new Set(data.map(d=>d.sample))].sort();
   const params  = [...new Set(data.map(d=>d.param))];
+  const colsPerParam = hmView==='both' ? 2 : 1;
+  const colLabel = hmView==='diff' ? 'Diff' : hmView==='rpd' ? '%RPD' : null;
 
-  // Header — if multi-week: columns = Week × Param, else Sample × Param
   let html = `<div class="table-container">`;
+
   if (multiWeek) {
-    html += `<div class="table-header"><span class="table-title">Heatmap — %RPD by Sample × Week × Parameter</span><span class="table-count">${days.length} weeks</span></div>`;
+    html += `<div class="table-header">
+      <span class="table-title">Heatmap — ${hmView==='rpd'?'%RPD':hmView==='diff'?'Diff':'Diff &amp; %RPD'} by Sample × Week × Parameter</span>
+      <span class="table-count">${days.length} สัปดาห์</span>
+    </div>${legendHtml}`;
     html += `<div class="heatmap-wrap"><table><thead>`;
-    // Row 1: param headers spanning weeks
-    html += `<tr><th>Sample</th>`;
-    params.forEach(p => {
-      html += `<th class="hm-th" colspan="${days.length * 2}" style="border-left:1px solid var(--c-border)">${p}</th>`;
+
+    // Row 1: Sample + Param headers
+    html += `<tr><th class="hm-sample-head hm-th" rowspan="3">Sample</th>`;
+    params.forEach((p,pi) => {
+      html += `<th class="hm-th hm-th-param${pi>0?' hm-param-sep':''}" colspan="${days.length * colsPerParam}">${p}</th>`;
     });
     html += `</tr>`;
-    // Row 2: week sub-headers
-    html += `<tr><th></th>`;
-    params.forEach(() => {
-      days.forEach((d,i) => {
-        html += `<th class="hm-th" colspan="2" style="border-left:${i===0?'1px solid var(--c-border)':'none'};font-size:9px">W${i+1}</th>`;
+
+    // Row 2: Week sub-headers
+    html += `<tr>`;
+    params.forEach((_,pi) => {
+      days.forEach((d,di) => {
+        html += `<th class="hm-th hm-th-week${di===0&&pi>0?' hm-param-sep':''}" colspan="${colsPerParam}">W${di+1}<br><span style="font-size:9px;font-weight:400;color:var(--c-text-3)">${d}</span></th>`;
       });
     });
     html += `</tr>`;
-    // Row 3: Diff/%RPD labels
-    html += `<tr><th></th>`;
-    params.forEach(() => {
-      days.forEach((_,i) => {
-        html += `<th class="hm-th" style="border-left:${i===0?'1px solid var(--c-border)':'none'};font-size:8px">Diff</th><th class="hm-th" style="font-size:8px">%RPD</th>`;
+
+    // Row 3: Diff/%RPD labels (only if showing both)
+    if (hmView==='both') {
+      html += `<tr>`;
+      params.forEach((_,pi) => {
+        days.forEach((_2,di) => {
+          html += `<th class="hm-th hm-th-sub${di===0&&pi>0?' hm-param-sep':''}">Diff</th><th class="hm-th hm-th-sub">%RPD</th>`;
+        });
       });
-    });
-    html += `</tr></thead><tbody>`;
+      html += `</tr>`;
+    }
+    html += `</thead><tbody>`;
 
     for (const s of samples) {
-      html += `<tr><td style="font-weight:500;color:var(--c-text-1)">${esc(s)}</td>`;
-      params.forEach(p => {
-        days.forEach((day, i) => {
+      html += `<tr><td class="hm-sample-col">${esc(s)}</td>`;
+      params.forEach((p,pi) => {
+        days.forEach((day,di) => {
           const rows = data.filter(d=>d.sample===s&&d.param===p&&d.day===day);
-          const borderL = i===0 ? 'border-left:1px solid var(--c-border);' : '';
+          const sep = di===0&&pi>0 ? ' hm-param-sep' : '';
           if (!rows.length) {
-            html += `<td class="hm-td hm-empty" colspan="2" style="${borderL}">—</td>`;
+            const empties = hmView==='both' ? `<td class="hm-td hm-empty${sep}">—</td><td class="hm-td hm-empty">—</td>` : `<td class="hm-td hm-empty${sep}">—</td>`;
+            html += empties;
           } else {
             const avgD = avg(rows.map(d=>Math.abs(d.diff)));
             const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
-            const avgN = avg(rows.map(d=>d.nir)), avgL2 = avg(rows.map(d=>d.lab));
-            const st = getStatus(p,avgN,avgL2,avgD,avgR);
-            html += `<td class="hm-td hm-${st}" style="${borderL}">${fmt(avgD,3)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
+            const avgN = avg(rows.map(d=>d.nir)), avgL = avg(rows.map(d=>d.lab));
+            const st = getStatus(p,avgN,avgL,avgD,avgR);
+            if (hmView==='diff')      html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td>`;
+            else if (hmView==='rpd')  html += `<td class="hm-td hm-${st}${sep}">${fmt(avgR,2)}%</td>`;
+            else html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
           }
         });
       });
-      html += '</tr>';
+      html += `</tr>`;
     }
+
   } else {
-    // Single week or filtered — original layout
-    html += `<div class="table-header"><span class="table-title">Heatmap — Diff &amp; %RPD by Sample × Parameter</span>${wf?'<span class="table-count">'+wf+'</span>':''}</div>`;
+    // Single week
+    const weekLabel = wf ? `<span class="table-count">${wf}</span>` : '';
+    html += `<div class="table-header">
+      <span class="table-title">Heatmap — ${hmView==='rpd'?'%RPD':hmView==='diff'?'Diff':'Diff &amp; %RPD'} by Sample × Parameter</span>
+      ${weekLabel}
+    </div>${legendHtml}`;
     html += `<div class="heatmap-wrap"><table><thead>`;
-    html += `<tr><th>Sample</th>${params.map(p=>`<th class="hm-th" colspan="2">${p}</th>`).join('')}</tr>`;
-    html += `<tr><th></th>${params.map(()=>'<th class="hm-th">Diff</th><th class="hm-th">%RPD</th>').join('')}</tr>`;
+    html += `<tr><th class="hm-sample-head hm-th" ${hmView==='both'?'rowspan="2"':''}>Sample</th>`;
+    params.forEach((p,pi) => {
+      html += `<th class="hm-th hm-th-param${pi>0?' hm-param-sep':''}" colspan="${colsPerParam}">${p}</th>`;
+    });
+    html += `</tr>`;
+    if (hmView==='both') {
+      html += `<tr>`;
+      params.forEach((_,pi) => {
+        html += `<th class="hm-th hm-th-sub${pi>0?' hm-param-sep':''}">Diff</th><th class="hm-th hm-th-sub">%RPD</th>`;
+      });
+      html += `</tr>`;
+    }
     html += `</thead><tbody>`;
     for (const s of samples) {
-      html += `<tr><td style="font-weight:500;color:var(--c-text-1)">${esc(s)}</td>`;
-      for (const p of params) {
+      html += `<tr><td class="hm-sample-col">${esc(s)}</td>`;
+      params.forEach((p,pi) => {
         const rows = data.filter(d=>d.sample===s&&d.param===p);
-        if (!rows.length) { html += `<td class="hm-td hm-empty" colspan="2">—</td>`; continue; }
-        const avgD = avg(rows.map(d=>Math.abs(d.diff)));
-        const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
-        const avgN = avg(rows.map(d=>d.nir)), avgL2 = avg(rows.map(d=>d.lab));
-        const st = getStatus(p,avgN,avgL2,avgD,avgR);
-        html += `<td class="hm-td hm-${st}">${fmt(avgD,3)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
-      }
-      html += '</tr>';
+        const sep = pi>0 ? ' hm-param-sep' : '';
+        if (!rows.length) {
+          html += hmView==='both' ? `<td class="hm-td hm-empty${sep}">—</td><td class="hm-td hm-empty">—</td>` : `<td class="hm-td hm-empty${sep}">—</td>`;
+        } else {
+          const avgD = avg(rows.map(d=>Math.abs(d.diff)));
+          const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
+          const avgN = avg(rows.map(d=>d.nir)), avgL = avg(rows.map(d=>d.lab));
+          const st = getStatus(p,avgN,avgL,avgD,avgR);
+          if (hmView==='diff')      html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td>`;
+          else if (hmView==='rpd')  html += `<td class="hm-td hm-${st}${sep}">${fmt(avgR,2)}%</td>`;
+          else html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
+        }
+      });
+      html += `</tr>`;
     }
   }
-  html += '</tbody></table></div></div>';
+
+  html += `</tbody></table></div></div>`;
   panel.innerHTML = html;
 }
+
+function buildSummaryCards(data, panel) {
+  if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
+
+  const wf = document.getElementById('wkSel').value;
+  const parseDate = s=>{const[d,m,y]=(s||'').split('/');return new Date(+y,+m-1,+d);};
+  const days = [...new Set(data.map(d=>d.day))].sort((a,b)=>parseDate(a)-parseDate(b));
+
+  // Build per-group stats
+  const groups = [1,2,3,4,5,6,7,8].filter(g=> data.some(d=>d.group===g));
+
+  let html = '<div style="padding:16px">';
+
+  // Week chips
+  if (days.length > 1) {
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">';
+    days.forEach((d,i) => {
+      html += `<span class="week-chip">W${i+1} — ${d}</span>`;
+    });
+    html += '</div>';
+  }
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">';
+
+  groups.forEach(g => {
+    const gData = data.filter(d=>d.group===g);
+    if (!gData.length) return;
+
+    const total = gData.length;
+    const good  = gData.filter(d=>d.status==='g').length;
+    const fair  = gData.filter(d=>d.status==='y').length;
+    const alert = gData.filter(d=>d.status==='r').length;
+    const pctG  = Math.round(good/total*100);
+    const pctY  = Math.round(fair/total*100);
+    const pctR  = Math.round(alert/total*100);
+
+    // Find worst params (most alerts)
+    const paramAlerts = {};
+    gData.forEach(d=>{ if(d.status==='r') paramAlerts[d.param]=(paramAlerts[d.param]||0)+1; });
+    const worstParams = Object.entries(paramAlerts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+    // Find worst samples (most alerts)
+    const sampleAlerts = {};
+    gData.forEach(d=>{ if(d.status==='r') sampleAlerts[d.sample]=(sampleAlerts[d.sample]||0)+1; });
+    const worstSamples = Object.entries(sampleAlerts).sort((a,b)=>b[1]-a[1]).slice(0,2);
+
+    // Border color based on status
+    const borderColor = alert>0 ? 'var(--c-alert-border)' : fair>0 ? 'var(--c-fair-border)' : 'var(--c-good-border)';
+    const accentColor = alert>0 ? 'var(--c-alert)' : fair>0 ? 'var(--c-fair)' : 'var(--c-good)';
+
+    html += `<div style="background:var(--c-bg-card);border:1px solid ${borderColor};border-radius:var(--r-lg);overflow:hidden;border-left:3px solid ${accentColor}">
+      <div style="padding:14px 16px 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:600;color:var(--c-text-1)">${esc(GROUP_NAMES[g]||'—')}</span>
+          <span style="font-size:11px;color:var(--c-text-3)">${total} measurements</span>
+        </div>
+
+        <!-- Status bar -->
+        <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:8px;background:var(--c-bg-surface)">
+          ${good  ? `<div style="width:${pctG}%;background:var(--c-good);height:100%"  title="${good} Good"></div>`  : ''}
+          ${fair  ? `<div style="width:${pctY}%;background:var(--c-fair);height:100%"  title="${fair} Fair"></div>`  : ''}
+          ${alert ? `<div style="width:${pctR}%;background:var(--c-alert);height:100%" title="${alert} Alert"></div>` : ''}
+        </div>
+
+        <!-- Status counts -->
+        <div style="display:flex;gap:12px;margin-bottom:10px">
+          <span style="font-size:11px;color:var(--c-good-text);display:flex;align-items:center;gap:4px">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--c-good);display:inline-block"></span>
+            ${good} Good <span style="color:var(--c-text-4)">(${pctG}%)</span>
+          </span>
+          <span style="font-size:11px;color:var(--c-fair-text);display:flex;align-items:center;gap:4px">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--c-fair);display:inline-block"></span>
+            ${fair} Fair <span style="color:var(--c-text-4)">(${pctY}%)</span>
+          </span>
+          <span style="font-size:11px;color:var(--c-alert-text);display:flex;align-items:center;gap:4px">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--c-alert);display:inline-block"></span>
+            ${alert} Alert <span style="color:var(--c-text-4)">(${pctR}%)</span>
+          </span>
+        </div>`;
+
+    // Worst params
+    if (worstParams.length) {
+      html += `<div style="padding-top:8px;border-top:1px solid var(--c-border-light)">
+        <div style="font-size:10px;font-weight:500;color:var(--c-text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Parameter ที่มีปัญหา</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">`;
+      worstParams.forEach(([p,cnt])=>{
+        html += `<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--c-alert-bg);color:var(--c-alert-text);border:1px solid var(--c-alert-border)">${esc(p)} (${cnt})</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Worst samples
+    if (worstSamples.length) {
+      html += `<div style="padding-top:8px;margin-top:6px;border-top:1px solid var(--c-border-light)">
+        <div style="font-size:10px;font-weight:500;color:var(--c-text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Sample ที่ต้องตรวจสอบ</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">`;
+      worstSamples.forEach(([s,cnt])=>{
+        html += `<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--c-bg-surface);color:var(--c-text-2);border:1px solid var(--c-border)">${esc(s)} ⚠${cnt}</span>`;
+      });
+      html += '</div></div>';
+    }
+
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+
+  // Overall summary row at bottom
+  const totAll   = data.length;
+  const goodAll  = data.filter(d=>d.status==='g').length;
+  const fairAll  = data.filter(d=>d.status==='y').length;
+  const alertAll = data.filter(d=>d.status==='r').length;
+
+  html += `<div style="margin:0 0 8px;padding:14px 16px;background:var(--c-bg-surface);border-top:1px solid var(--c-border);display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:500;color:var(--c-text-1)">รวมทั้งหมด</span>
+    <span style="font-size:12px;color:var(--c-text-3)">${totAll} measurements</span>
+    <span style="font-size:12px;color:var(--c-good-text)">● ${goodAll} Good (${Math.round(goodAll/totAll*100)}%)</span>
+    <span style="font-size:12px;color:var(--c-fair-text)">● ${fairAll} Fair (${Math.round(fairAll/totAll*100)}%)</span>
+    <span style="font-size:12px;color:var(--c-alert-text)">● ${alertAll} Alert (${Math.round(alertAll/totAll*100)}%)</span>
+  </div>`;
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
 
 function buildTable(data, panel) {
   if (!data.length) { panel.innerHTML='<div class="empty-state">No data</div>'; return; }
