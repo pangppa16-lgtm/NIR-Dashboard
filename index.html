@@ -1003,10 +1003,26 @@ function findTH(table, v) {
   return table[table.length-1];
 }
 
-function getStatus(param, nir, lab, diff, rpd) {
+// Sugar group Pol diff limit per sample type
+function sugarPolDiffLimit(sampleName) {
+  const s = (sampleName||'').toLowerCase();
+  if (s.includes('refined') || s.includes('white')) return 0.094;
+  // Raw Sugar, Raw Silo, หรือ Sugar อื่นๆ
+  return 0.25;
+}
+
+function getStatus(param, nir, lab, diff, rpd, sample, group) {
   const p = param.toLowerCase().replace('%','');
   const v = (Math.abs(nir||0)+Math.abs(lab||0))/2;
   const d = Math.abs(diff||0), r = Math.abs(rpd||0);
+  if (p==='pol' && group===7) {
+    // Sugar group: Diff-based threshold per sample type
+    const dlim = sugarPolDiffLimit(sample);
+    const dfair = dlim * 1.5;
+    if (d<=dlim && r<=2) return 'g';
+    if (d<=dfair && r<=4) return 'y';
+    return 'r';
+  }
   if (p==='brix'||p==='pol') {
     const t = findTH(BRIX_POL_TH, v);
     if (d<=t.diff && r<=t.rpd.g) return 'g';
@@ -1017,13 +1033,17 @@ function getStatus(param, nir, lab, diff, rpd) {
   if (p==='moisture') { const t=findTH(MOISTURE_TH,v); return d<=t.d?'g':d<=t.d*2?'y':'r'; }
   if (p==='tsai') return d<=2.0?'g':d<=4?'y':'r';
   if (p==='rs') return d<=1.5?'g':d<=3?'y':'r';
-  if (p==='purity') return 'g'; // Purity: no RPD threshold applied
+  if (p==='purity') return 'g';
   return r<=3?'g':r<=7?'y':'r';
 }
 
-function thLabel(param, nir, lab) {
+function thLabel(param, nir, lab, sample, group) {
   const p = param.toLowerCase().replace('%','');
   const v = (Math.abs(nir||0)+Math.abs(lab||0))/2;
+  if (p==='pol' && group===7) {
+    const dlim = sugarPolDiffLimit(sample);
+    return `Diff≤${dlim} | RPD≤2%`;
+  }
   if (p==='brix'||p==='pol') { const t=findTH(BRIX_POL_TH,v); return `Diff≤${t.diff} | RPD≤${t.rpd.g}%`; }
   if (p==='color') { const t=findTH(COLOR_TH,v); return `Diff≤${t.d}`; }
   if (p==='moisture') { const t=findTH(MOISTURE_TH,v); return `Diff≤${t.d}`; }
@@ -1063,7 +1083,8 @@ function parseCSV(rows) {
       const d = dv!==null ? Math.abs(dv) : (nir!==null&&lab!==null ? Math.abs(nir-lab) : 0);
       const avg2=(Math.abs(nir||0)+Math.abs(lab||0))/2;
       const rr = rv!==null ? Math.abs(rv) : (avg2===0?0:Math.abs((nir||0)-(lab||0))/avg2*100);
-      out.push({day,sample,group:getGroup(sample),param:p,nir:nir||0,lab:lab||0,diff:+d.toFixed(4),rpd:+rr.toFixed(2),status:getStatus(p,nir||0,lab||0,d,rr)});
+      const grp=getGroup(sample);
+      out.push({day,sample,group:grp,param:p,nir:nir||0,lab:lab||0,diff:+d.toFixed(4),rpd:+rr.toFixed(2),status:getStatus(p,nir||0,lab||0,d,rr,sample,grp)});
     });
   });
   return out;
@@ -1306,7 +1327,7 @@ function buildSummary(data, panel) {
     const avgLab=avg(rows.map(d=>d.lab));
     const avgDiff=avg(rows.map(d=>Math.abs(d.diff)));
     const avgRPD=+avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
-    const st=getStatus(p,avgNIR,avgLab,avgDiff,avgRPD);
+    const st=getStatus(p,avgNIR,avgLab,avgDiff,avgRPD,rows[0]?.sample,rows[0]?.group);
     const dom=rows.some(d=>d.status==='r')?'r':rows.some(d=>d.status==='y')?'y':'g';
     const th=thLabel(p,avgNIR,avgLab);
     html+=`<div class="param-card" style="cursor:pointer" onclick="goToParam('${p}')" title="คลิกเพื่อดูข้อมูล ${p} ใน Data Table">
@@ -1342,7 +1363,7 @@ function renderHmCell(p, rows) {
   const avgD = avg(rows.map(d=>Math.abs(d.diff)));
   const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
   const avgN = avg(rows.map(d=>d.nir)), avgL = avg(rows.map(d=>d.lab));
-  const st = getStatus(p,avgN,avgL,avgD,avgR);
+  const st = getStatus(p,avgN,avgL,avgD,avgR,s,rows[0]?.group);
   if (hmView==='diff') return `<td class="hm-td hm-${st}">${fmt(avgD,2)}</td>`;
   if (hmView==='rpd')  return `<td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
   return `<td class="hm-td hm-${st}">${fmt(avgD,2)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
@@ -1432,7 +1453,7 @@ function buildHeatmap(data, panel) {
             const avgD = avg(rows.map(d=>Math.abs(d.diff)));
             const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
             const avgN = avg(rows.map(d=>d.nir)), avgL = avg(rows.map(d=>d.lab));
-            const st = getStatus(p,avgN,avgL,avgD,avgR);
+            const st = getStatus(p,avgN,avgL,avgD,avgR,s,rows[0]?.group);
             if (hmView==='diff')      html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td>`;
             else if (hmView==='rpd')  html += `<td class="hm-td hm-${st}${sep}">${fmt(avgR,2)}%</td>`;
             else html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
@@ -1474,7 +1495,7 @@ function buildHeatmap(data, panel) {
           const avgD = avg(rows.map(d=>Math.abs(d.diff)));
           const avgR = +avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
           const avgN = avg(rows.map(d=>d.nir)), avgL = avg(rows.map(d=>d.lab));
-          const st = getStatus(p,avgN,avgL,avgD,avgR);
+          const st = getStatus(p,avgN,avgL,avgD,avgR,s,rows[0]?.group);
           if (hmView==='diff')      html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td>`;
           else if (hmView==='rpd')  html += `<td class="hm-td hm-${st}${sep}">${fmt(avgR,2)}%</td>`;
           else html += `<td class="hm-td hm-${st}${sep}">${fmt(avgD,2)}</td><td class="hm-td hm-${st}">${fmt(avgR,2)}%</td>`;
@@ -1637,8 +1658,8 @@ function buildTable(data, panel) {
     </tr></thead><tbody>`;
 
   for (const d of pageData) {
-    const st=getStatus(d.param,d.nir,d.lab,d.diff,d.rpd);
-    const th=thLabel(d.param,d.nir,d.lab);
+    const st=getStatus(d.param,d.nir,d.lab,d.diff,d.rpd,d.sample,d.group);
+    const th=thLabel(d.param,d.nir,d.lab,d.sample,d.group);
     html+=`<tr>
       <td class="td-mono"><span style="font-size:10px;font-weight:600;color:var(--c-primary);margin-right:4px">${dayLabel[d.day]||''}</span>${esc(d.day)}</td>
       <td style="color:var(--c-text-3)">${esc(GROUP_NAMES[d.group]||'—')}</td>
