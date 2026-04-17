@@ -1329,7 +1329,10 @@ function buildSummary(data, panel) {
     const avgRPD=+avg(rows.map(d=>Math.abs(d.rpd))).toFixed(2);
     const st=getStatus(p,avgNIR,avgLab,avgDiff,avgRPD,rows[0]?.sample,rows[0]?.group);
     const dom=rows.some(d=>d.status==='r')?'r':rows.some(d=>d.status==='y')?'y':'g';
-    const th=thLabel(p,avgNIR,avgLab);
+    // ใช้ activeGroup ถ้าเลือกอยู่ ไม่งั้นใช้ group ที่มีมากสุดใน rows
+    const grpId = activeGroup!==0 ? activeGroup : (rows.reduce((a,d)=>{a[d.group]=(a[d.group]||0)+1;return a;},{}), rows.sort((a,b)=>{const c={};rows.forEach(r=>{c[r.group]=(c[r.group]||0)+1;});return (c[b.group]||0)-(c[a.group]||0);})[0]?.group||0);
+    const sampleName = activeGroup===7 ? (rows.find(d=>d.group===7)?.sample||rows[0]?.sample||'') : (rows[0]?.sample||'');
+    const th=thLabel(p,avgNIR,avgLab,sampleName,grpId);
     html+=`<div class="param-card" style="cursor:pointer" onclick="goToParam('${p}')" title="คลิกเพื่อดูข้อมูล ${p} ใน Data Table">
       <div class="pc-header">
         <div class="pc-name" style="text-decoration:underline dotted;text-underline-offset:3px">${p}</div>
